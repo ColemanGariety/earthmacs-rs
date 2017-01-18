@@ -1,7 +1,0 @@
-[project]
-name = "earthmacs"
-version = "0.0.1"
-authors = ["clmn"]
-
-[dependencies]
-ncurses = "5.85.0"
