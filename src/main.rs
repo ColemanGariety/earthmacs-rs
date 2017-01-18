@@ -20,9 +20,11 @@ fn main() {
     if let Some(filename) = env::args().nth(1) {
         let ed = &mut Editor::new();
         ed.open(filename);
+        ed.draw();
         loop {
             let input: i32 = getch();
             ed.handleInput(input);
+            // ed.draw();
         }
     }
 }

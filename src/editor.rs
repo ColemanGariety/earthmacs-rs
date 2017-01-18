@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
+use ncurses::*;
 use buffer::Buffer;
 use window::Window;
 
@@ -20,9 +21,24 @@ impl Editor {
 
     pub fn handleInput(&mut self, input: i32) {
         match input {
+            104 => { // h
+                for window in self.windows.iter() {
+                    self.buffers[window.buffer_index].moveLeft();
+                }
+            },
             106 => { // j
                 for window in self.windows.iter() {
                     self.buffers[window.buffer_index].moveDown();
+                }
+            },
+            107 => { // k
+                for window in self.windows.iter() {
+                    self.buffers[window.buffer_index].moveUp();
+                }
+            },
+            108 => { // l
+                for window in self.windows.iter() {
+                    self.buffers[window.buffer_index].moveRight();
                 }
             },
             _ => ()
@@ -41,5 +57,13 @@ impl Editor {
             },
             Err(e) => ()
         }
+    }
+
+    pub fn draw(&self) {
+        let ref buf = self.buffers[1];
+        for (index, line) in buf.lines.iter().enumerate() {
+            mvprintw(index as i32, 0, line);
+        }
+        mv(buf.y, buf.x);
     }
 }

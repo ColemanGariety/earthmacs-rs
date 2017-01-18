@@ -1,5 +1,5 @@
 dev:
-	cargo build && ./target/debug/earthmacs
+	cargo build && ./target/debug/earthmacs ~/.emacs
 
 all:
 	cargo build --release
