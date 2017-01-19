@@ -18,41 +18,37 @@ impl Buffer {
         }
     }
 
-    pub fn insertLine(&mut self, line: String, index: usize) {
-        self.lines.insert(index, Buffer::remTabs(line));
+    pub fn insert_line(&mut self, line: String, index: usize) {
+        self.lines.insert(index, Buffer::rem_tabs(line));
     }
 
-    pub fn appendLine(&mut self, line: String) {
-        self.lines.push(Buffer::remTabs(line));
+    pub fn append_line(&mut self, line: String) {
+        self.lines.push(Buffer::rem_tabs(line));
     }
 
-    pub fn removeLine(&mut self, index: usize) {
+    pub fn remove_line(&mut self, index: usize) {
         self.lines.remove(index);
     }
 
-    pub fn moveLeft(&mut self) {
+    pub fn move_left(&mut self) {
         self.x = max(0, self.x - 1);
-        mv(self.y, self.x);
     }
 
-    pub fn moveDown(&mut self) {
-        self.y = self.y + 1;
-        mv(self.y, self.x);
+    pub fn move_down(&mut self) {
+        self.y = min(self.lines.len() as i32, self.y + 1);
     }
 
-    pub fn moveUp(&mut self) {
+    pub fn move_up(&mut self) {
         self.y = max(0, self.y - 1);
-        mv(self.y, self.x);
     }
 
-    pub fn moveRight(&mut self) {
-        self.x = self.x + 1;
-        mv(self.y, self.x);
+    pub fn move_right(&mut self) {
+        self.x = min(self.lines[self.y as usize].len() as i32, self.x + 1);
     }
 
     // private
-    
-    fn remTabs(line: String) -> String {
+
+    fn rem_tabs(line: String) -> String {
         line.replace("\t", "    ")
     }
 }

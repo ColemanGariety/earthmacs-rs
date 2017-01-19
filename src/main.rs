@@ -1,6 +1,6 @@
 extern crate ncurses;
 
-use std::{char, env, ptr};
+use std::{env};
 use ncurses::*;
 use editor::Editor;
 
@@ -23,8 +23,8 @@ fn main() {
         ed.draw();
         loop {
             let input: i32 = getch();
-            ed.handleInput(input);
-            // ed.draw();
+            ed.handle_input(input);
+            ed.draw();
         }
     }
 }
