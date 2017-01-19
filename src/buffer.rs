@@ -36,14 +36,24 @@ impl Buffer {
 
     pub fn move_down(&mut self) {
         self.y = min(self.lines.len() as i32, self.y + 1);
+        self.x = min(self.lines[self.y as usize].len() as i32, self.x);
     }
 
     pub fn move_up(&mut self) {
         self.y = max(0, self.y - 1);
+        self.x = min(self.lines[self.y as usize].len() as i32, self.x);
     }
 
     pub fn move_right(&mut self) {
         self.x = min(self.lines[self.y as usize].len() as i32, self.x + 1);
+    }
+
+    pub fn bol(&mut self) {
+        self.x = 0;
+    }
+
+    pub fn eol(&mut self) {
+        // not implemented
     }
 
     // private

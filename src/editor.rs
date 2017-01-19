@@ -14,7 +14,7 @@ impl Editor {
     pub fn new() -> Editor {
         let mut welcome = Buffer::new();
         Editor {
-            windows: vec![Window::new(0)],
+            windows: vec![Window::new(1)],
             buffers: vec![welcome],
         }
     }
@@ -22,34 +22,36 @@ impl Editor {
     pub fn handle_input(&mut self, input: i32) {
         match input {
             36 => { // $
-                for window in self.windows.iter_mut() {
-                    window.eol();
-                }
+                let ref mut window = self.windows[0];
+                self.buffers[window.buffer_index].eol();
             },
             48 => { // 0
-                for window in self.windows.iter_mut() {
-                    window.bol();
-                }
+                let ref mut window = self.windows[0];
+                self.buffers[window.buffer_index].bol();
             },
             104 => { // h
-                for window in self.windows.iter_mut() {
-                    window.move_left();
-                }
+                let ref mut window = self.windows[0];
+                self.buffers[window.buffer_index].move_left();
             },
             106 => { // j
-                for window in self.windows.iter_mut() {
-                    window.move_down();
+                let ref mut win = self.windows[0];
+                let ref mut buf = self.buffers[win.buffer_index];
+                buf.move_down();
+                if buf.y >= (win.y + Editor::get_max_y()) {
+                    win.scroll_down();
                 }
             },
             107 => { // k
-                for window in self.windows.iter_mut() {
-                    window.move_up();
+                let ref mut win = self.windows[0];
+                let ref mut buf = self.buffers[win.buffer_index];
+                buf.move_up();
+                if buf.y < win.y {
+                    win.scroll_up();
                 }
             },
             108 => { // l
-                for window in self.windows.iter_mut() {
-                    window.move_right();
-                }
+                let ref mut window = self.windows[0];
+                self.buffers[window.buffer_index].move_right();
             },
             _ => ()
         }
@@ -72,9 +74,24 @@ impl Editor {
     pub fn draw(&self) {
         let ref buf = self.buffers[1];
         let ref win = self.windows[0];
-        for (index, line) in buf.lines.iter().enumerate() {
-            mvprintw(index as i32, 0, line);
+        let y = win.y - buf.y;
+        let x = buf.x;
+        let lines = buf.lines.iter().skip(win.y as usize).take(Editor::get_max_y() as usize);
+        for (index, line) in lines.enumerate() {
+            mv(index as i32, 0);
+            clrtoeol();
+            printw(line);
         }
-        mv(win.y, win.x);
+        mv(buf.y - win.y, buf.x);
     }
+
+    // Private
+
+    fn get_max_y() -> i32 {
+        let mut max_y = 0;
+        let mut max_x = 0;
+        getmaxyx(stdscr(), &mut max_y, &mut max_x);
+        max_y
+    }
+
 }
