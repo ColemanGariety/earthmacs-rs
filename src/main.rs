@@ -14,9 +14,6 @@ fn main() {
     cbreak();
     keypad(stdscr(), true);
 
-    refresh();
-    endwin();
-
     if let Some(filename) = env::args().nth(1) {
         let ed = &mut Editor::new();
         ed.open(filename);

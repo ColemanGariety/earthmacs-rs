@@ -80,7 +80,6 @@ impl Editor {
         for (index, line) in lines.enumerate() {
             mv(index as i32, 0);
             clrtoeol();
-            printw(line);
         }
         mv(buf.y - win.y, buf.x);
     }
