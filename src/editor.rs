@@ -23,11 +23,11 @@ impl Editor {
         match input {
             36 => { // $
                 let ref mut window = self.windows[0];
-                self.buffers[window.buffer_index].eol();
+                self.buffers[window.buffer_index].move_eol();
             },
             48 => { // 0
                 let ref mut window = self.windows[0];
-                self.buffers[window.buffer_index].bol();
+                self.buffers[window.buffer_index].move_bol();
             },
             104 => { // h
                 let ref mut window = self.windows[0];
@@ -80,6 +80,7 @@ impl Editor {
         for (index, line) in lines.enumerate() {
             mv(index as i32, 0);
             clrtoeol();
+            addstr(line);
         }
         mv(buf.y - win.y, buf.x);
     }
@@ -92,5 +93,4 @@ impl Editor {
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
         max_y
     }
-
 }
