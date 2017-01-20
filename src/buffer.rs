@@ -66,6 +66,11 @@ impl Buffer {
         self.col = 999999999;
     }
 
+    pub fn move_down_by(&mut self, y: i32) {
+        self.y = max(0, self.y + y);
+        self.row = self.y;
+    }
+
     // private
 
     fn eol(&self) -> i32 {

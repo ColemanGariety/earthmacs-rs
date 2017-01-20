@@ -1,7 +1,9 @@
+use std;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
 use ncurses::*;
+
 use buffer::Buffer;
 use window::Window;
 
@@ -19,21 +21,21 @@ impl Editor {
         }
     }
 
-    pub fn handle_input(&mut self, input: i32) {
-        match input {
-            36 => { // $
+    pub fn handle_input(&mut self, key: &str) {
+        match key {
+            "$" => {
                 let ref mut window = self.windows[0];
                 self.buffers[window.buffer_index].move_eol();
             },
-            48 => { // 0
+            "0" => {
                 let ref mut window = self.windows[0];
                 self.buffers[window.buffer_index].move_bol();
             },
-            104 => { // h
+            "h" => {
                 let ref mut window = self.windows[0];
                 self.buffers[window.buffer_index].move_left();
             },
-            106 => { // j
+            "j" => {
                 let ref mut win = self.windows[0];
                 let ref mut buf = self.buffers[win.buffer_index];
                 buf.move_down();
@@ -41,7 +43,7 @@ impl Editor {
                     win.scroll_down();
                 }
             },
-            107 => { // k
+            "k" => {
                 let ref mut win = self.windows[0];
                 let ref mut buf = self.buffers[win.buffer_index];
                 buf.move_up();
@@ -49,10 +51,26 @@ impl Editor {
                     win.scroll_up();
                 }
             },
-            108 => { // l
+            "l" => {
                 let ref mut window = self.windows[0];
                 self.buffers[window.buffer_index].move_right();
             },
+            "<C-c>" => {
+                endwin();
+                std::process::exit(0);
+            },
+            "<C-f>" => {
+                let ref mut win = self.windows[0];
+                let ref mut buf = self.buffers[win.buffer_index];
+                buf.move_down_by(Editor::get_max_y());
+                win.scroll_by(Editor::get_max_y());
+            },
+            "<C-b>" => {
+                let ref mut win = self.windows[0];
+                let ref mut buf = self.buffers[win.buffer_index];
+                buf.move_down_by(Editor::get_max_y() * -1);
+                win.scroll_by(Editor::get_max_y() * -1);
+            }
             _ => ()
         }
     }
@@ -83,6 +101,7 @@ impl Editor {
             addstr(line);
         }
         mv(buf.y - win.y, buf.x);
+        refresh();
     }
 
     // Private

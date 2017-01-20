@@ -1,7 +1,13 @@
+extern crate libc;
 extern crate ncurses;
+extern crate termkey;
 
+use std::default::Default;
 use std::{env};
+use std::io::{Write, stdout, stdin};
 use ncurses::*;
+use termkey::*;
+
 use editor::Editor;
 
 mod editor;
@@ -14,14 +20,21 @@ fn main() {
     cbreak();
     keypad(stdscr(), true);
 
+    let mut tk = TermKey::new(0, c::TERMKEY_FLAG_CTRLC);
+    let ed = &mut Editor::new();
+
     if let Some(filename) = env::args().nth(1) {
-        let ed = &mut Editor::new();
         ed.open(filename);
         ed.draw();
+
         loop {
-            let input: i32 = getch();
-            ed.handle_input(input);
-            ed.draw();
+            match tk.waitkey() {
+                TermKeyResult::Key(key) => {
+                    ed.handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM));
+                    ed.draw();
+                },
+                _ => ()
+            }
         }
     }
 }

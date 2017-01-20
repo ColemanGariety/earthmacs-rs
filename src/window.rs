@@ -23,4 +23,7 @@ impl Window {
         self.y -= 1;
     }
 
+    pub fn scroll_by(&mut self, y: i32) {
+        self.y = max(0, self.y + y);
+    }
 }
