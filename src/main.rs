@@ -12,7 +12,8 @@ use editor::Editor;
 
 mod editor;
 mod buffer;
-mod window;
+mod pane;
+mod mode;
 
 fn main() {
     initscr();

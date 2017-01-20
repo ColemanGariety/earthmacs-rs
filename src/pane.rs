@@ -1,16 +1,19 @@
 use std::cmp::{min, max};
 use ncurses::*;
 use buffer::Buffer;
+use mode::Mode;
 
-pub struct Window {
+pub struct Pane {
     pub buffer_index: usize,
+    pub mode: Mode,
     pub y: i32,
 }
 
-impl Window {
-    pub fn new(buffer_index: usize) -> Window {
-        Window {
+impl Pane {
+    pub fn new(buffer_index: usize) -> Pane {
+        Pane {
             buffer_index: buffer_index,
+            mode: Mode::new(),
             y: 0,
         }
     }

@@ -5,18 +5,18 @@ use std::io::BufRead;
 use ncurses::*;
 
 use buffer::Buffer;
-use window::Window;
+use pane::Pane;
 
 pub struct Editor {
     buffers: Vec<Buffer>,
-    windows: Vec<Window>,
+    panes: Vec<Pane>,
 }
 
 impl Editor {
     pub fn new() -> Editor {
         let mut welcome = Buffer::new();
         Editor {
-            windows: vec![Window::new(1)],
+            panes: vec![Pane::new(1)],
             buffers: vec![welcome],
         }
     }
@@ -24,19 +24,19 @@ impl Editor {
     pub fn handle_input(&mut self, key: &str) {
         match key {
             "$" => {
-                let ref mut window = self.windows[0];
-                self.buffers[window.buffer_index].move_eol();
+                let ref mut pane = self.panes[0];
+                self.buffers[pane.buffer_index].move_eol();
             },
             "0" => {
-                let ref mut window = self.windows[0];
-                self.buffers[window.buffer_index].move_bol();
+                let ref mut pane = self.panes[0];
+                self.buffers[pane.buffer_index].move_bol();
             },
             "h" => {
-                let ref mut window = self.windows[0];
-                self.buffers[window.buffer_index].move_left();
+                let ref mut pane = self.panes[0];
+                self.buffers[pane.buffer_index].move_left();
             },
             "j" => {
-                let ref mut win = self.windows[0];
+                let ref mut win = self.panes[0];
                 let ref mut buf = self.buffers[win.buffer_index];
                 buf.move_down();
                 if buf.y >= (win.y + Editor::get_max_y()) {
@@ -44,7 +44,7 @@ impl Editor {
                 }
             },
             "k" => {
-                let ref mut win = self.windows[0];
+                let ref mut win = self.panes[0];
                 let ref mut buf = self.buffers[win.buffer_index];
                 buf.move_up();
                 if buf.y < win.y {
@@ -52,21 +52,21 @@ impl Editor {
                 }
             },
             "l" => {
-                let ref mut window = self.windows[0];
-                self.buffers[window.buffer_index].move_right();
+                let ref mut pane = self.panes[0];
+                self.buffers[pane.buffer_index].move_right();
             },
             "<C-c>" => {
                 endwin();
                 std::process::exit(0);
             },
             "<C-f>" => {
-                let ref mut win = self.windows[0];
+                let ref mut win = self.panes[0];
                 let ref mut buf = self.buffers[win.buffer_index];
                 buf.move_down_by(Editor::get_max_y());
                 win.scroll_by(Editor::get_max_y());
             },
             "<C-b>" => {
-                let ref mut win = self.windows[0];
+                let ref mut win = self.panes[0];
                 let ref mut buf = self.buffers[win.buffer_index];
                 buf.move_down_by(Editor::get_max_y() * -1);
                 win.scroll_by(Editor::get_max_y() * -1);
@@ -91,7 +91,7 @@ impl Editor {
 
     pub fn draw(&self) {
         let ref buf = self.buffers[1];
-        let ref win = self.windows[0];
+        let ref win = self.panes[0];
         let y = win.y - buf.y;
         let x = buf.x;
         let lines = buf.lines.iter().skip(win.y as usize).take(Editor::get_max_y() as usize);
