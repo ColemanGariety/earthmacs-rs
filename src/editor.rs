@@ -7,6 +7,10 @@ use ncurses::*;
 use buffer::Buffer;
 use pane::Pane;
 
+static COLOR_BACKGROUND: i16 = 16;
+static COLOR_FOREGROUND: i16 = 17;
+static COLOR_PAIR_DEFAULT: i16 = 1;
+
 pub struct Editor {
     buffers: Vec<Buffer>,
     panes: Vec<Pane>,
@@ -63,7 +67,8 @@ impl Editor {
             "<C-f>" => {
                 let ref mut pane = self.panes[0];
                 let ref mut buf = self.buffers[pane.buffer_index];
-                for _ in 1..(Editor::get_max_y()) {
+                buf.y = pane.y + Editor::get_max_y() - 3;
+                for _ in 2..(Editor::get_max_y()) {
                     buf.move_down();
                     if buf.y >= (pane.y + Editor::get_max_y() - 2) {
                         pane.scroll_down();
@@ -73,6 +78,7 @@ impl Editor {
             "<C-b>" => {
                 let ref mut pane = self.panes[0];
                 let ref mut buf = self.buffers[pane.buffer_index];
+                buf.y = pane.y;
                 for _ in 1..(Editor::get_max_y()) {
                     buf.move_up();
                     if buf.y < pane.y {
@@ -99,18 +105,28 @@ impl Editor {
     }
 
     pub fn draw(&self) {
+        start_color();
+        use_default_colors();
+        init_pair(COLOR_PAIR_DEFAULT, 3, -1);
+
         let ref buf = self.buffers[1];
         let ref pane = self.panes[0];
         let mut max_y = 0;
         let mut max_x = 0;
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
         let lines = buf.lines.iter().skip(pane.y as usize).take(max_y as usize);
+
         for (index, line) in lines.enumerate() {
             wmove(pane.window, (index + 1) as i32, 0);
             wclrtoeol(pane.window);
             waddstr(pane.window, format!(" {}", line).as_str());
         }
+
+        wattron(pane.window, COLOR_PAIR(COLOR_PAIR_DEFAULT));
         box_(pane.window, 0, 0);
+        wattroff(pane.window, COLOR_PAIR(COLOR_PAIR_DEFAULT));
+
+        // update cursor
         wresize(pane.window, max_y, max_x);
         wmove(pane.window, (buf.y - pane.y) + 1, buf.x + 1);
         wrefresh(pane.window);

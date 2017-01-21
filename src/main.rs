@@ -1,4 +1,3 @@
-extern crate libc;
 extern crate ncurses;
 extern crate termkey;
 
@@ -18,7 +17,7 @@ fn main() {
     initscr();
     noecho();
     cbreak();
-    // keypad(stdscr(), true);
+    keypad(stdscr(), true);
 
     let mut tk = TermKey::new(0, c::TERMKEY_FLAG_CTRLC);
     let ed = &mut Editor::new();
