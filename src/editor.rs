@@ -6,81 +6,69 @@ use std::io::Write;
 use ncurses::*;
 
 use buffer::Buffer;
-use pane::Pane;
 
 static COLOR_PAIR_DEFAULT: i16 = 1;
 
 pub struct Editor {
     buffers: Vec<Buffer>,
-    panes: Vec<Pane>,
 }
 
 impl Editor {
     pub fn new() -> Editor {
-        let welcome = Buffer::new("".to_string());
         Editor {
-            panes: vec![Pane::new(1)],
-            buffers: vec![welcome],
+            buffers: vec![],
         }
     }
 
     pub fn handle_input(&mut self, key: &str) {
         match key {
             "$" => {
-                let ref mut pane = self.panes[0];
-                self.buffers[pane.buffer_index].move_eol();
+                self.buffers[0].move_eol();
             },
             "0" => {
-                let ref mut pane = self.panes[0];
-                self.buffers[pane.buffer_index].move_bol();
+                self.buffers[0].move_bol();
             },
             "h" => {
-                let ref mut pane = self.panes[0];
-                self.buffers[pane.buffer_index].move_left();
+                self.buffers[0].move_left();
             },
             "j" => {
-                let ref mut pane = self.panes[0];
-                let ref mut buf = self.buffers[pane.buffer_index];
+                let ref mut buf = self.buffers[0];
                 buf.move_down();
-                if buf.y >= (pane.y + Editor::get_max_y() - 2) {
-                    pane.scroll_down();
+                if buf.cursor_y >= (buf.scroll_y + Editor::get_max_y() - 2) {
+                    buf.scroll_down();
                 }
             },
             "k" => {
-                let ref mut pane = self.panes[0];
-                let ref mut buf = self.buffers[pane.buffer_index];
+                let ref mut buf = self.buffers[0];
                 buf.move_up();
-                if buf.y < pane.y {
-                    pane.scroll_up();
+                if buf.cursor_y < buf.scroll_y {
+                    buf.scroll_up();
                 }
             },
             "l" => {
-                let ref mut pane = self.panes[0];
-                self.buffers[pane.buffer_index].move_right();
+                self.buffers[0].move_right();
             },
             "<C-c>" => {
                 endwin();
                 std::process::exit(0);
             },
             "<C-f>" => {
-                let ref mut pane = self.panes[0];
-                let ref mut buf = self.buffers[pane.buffer_index];
-                buf.y = pane.y + Editor::get_max_y() - 3;
+                let ref mut buf = self.buffers[0];
+                buf.cursor_y = buf.scroll_y + Editor::get_max_y() - 3;
                 for _ in 2..(Editor::get_max_y()) {
                     buf.move_down();
-                    if buf.y >= (pane.y + Editor::get_max_y() - 2) {
-                        pane.scroll_down();
+                    if buf.cursor_y >= (buf.scroll_y + Editor::get_max_y() - 2) {
+                        buf.scroll_down();
                     }
                 }
             },
             "<C-b>" => {
-                let ref mut pane = self.panes[0];
-                let ref mut buf = self.buffers[pane.buffer_index];
-                buf.y = pane.y;
+                let ref mut buf = self.buffers[0];
+                buf.cursor_y = buf.scroll_y;
                 for _ in 1..(Editor::get_max_y()) {
                     buf.move_up();
-                    if buf.y < pane.y {
-                        pane.scroll_up();
+                    if buf.cursor_y < buf.scroll_y {
+                        buf.scroll_up();
                     }
                 }
             },
@@ -118,27 +106,26 @@ impl Editor {
     pub fn draw(&self) {
         init_pair(COLOR_PAIR_DEFAULT, 3, -1);
 
-        let ref buf = self.buffers[1];
-        let ref pane = self.panes[0];
+        let ref buf = self.buffers[0];
         let mut max_y = 0;
         let mut max_x = 0;
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
-        let lines = buf.lines.iter().skip(pane.y as usize).take(max_y as usize);
+        let lines = buf.lines.iter().skip(buf.scroll_y as usize).take(max_y as usize);
 
         for (index, line) in lines.enumerate() {
-            wmove(pane.window, (index + 1) as i32, 0);
-            wclrtoeol(pane.window);
-            waddstr(pane.window, format!(" {}", line).as_str());
+            wmove(buf.window, (index + 1) as i32, 0);
+            wclrtoeol(buf.window);
+            waddstr(buf.window, format!(" {}", line).as_str());
         }
 
-        wattron(pane.window, COLOR_PAIR(COLOR_PAIR_DEFAULT));
-        box_(pane.window, 0, 0);
-        wattroff(pane.window, COLOR_PAIR(COLOR_PAIR_DEFAULT));
+        wattron(buf.window, COLOR_PAIR(COLOR_PAIR_DEFAULT));
+        box_(buf.window, 0, 0);
+        wattroff(buf.window, COLOR_PAIR(COLOR_PAIR_DEFAULT));
 
         // update cursor
-        wresize(pane.window, max_y, max_x);
-        wmove(pane.window, (buf.y - pane.y) + 1, buf.x + 1);
-        wrefresh(pane.window);
+        wresize(buf.window, max_y, max_x);
+        wmove(buf.window, (buf.cursor_y - buf.scroll_y) + 1, buf.cursor_x + 1);
+        wrefresh(buf.window);
     }
 
     pub fn get_max_y() -> i32 {

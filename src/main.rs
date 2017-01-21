@@ -7,11 +7,8 @@ use termkey::*;
 
 use editor::Editor;
 
-// structs
 mod editor;
 mod buffer;
-mod pane;
-mod mode;
 
 fn main() {
     initscr();
@@ -27,7 +24,7 @@ fn main() {
     if let Some(filename) = env::args().nth(1) {
         ed.open(filename);
         ed.draw();
-
+        
         loop {
             match tk.waitkey() {
                 TermKeyResult::Key(key) => {
@@ -39,3 +36,4 @@ fn main() {
         }
     }
 }
+
