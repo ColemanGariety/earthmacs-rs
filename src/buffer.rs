@@ -1,5 +1,4 @@
 use std::cmp::{min, max};
-use ncurses::*;
 
 pub struct Buffer {
     pub lines: Vec<String>,
@@ -7,7 +6,6 @@ pub struct Buffer {
     pub y: i32,
     pub col: i32,
     pub row: i32,
-    pub mode: String,
 }
 
 impl Buffer {
@@ -18,7 +16,6 @@ impl Buffer {
             y: 0,
             col: 0,
             row: 0,
-            mode: "normal".to_string(),
         }
     }
 
@@ -40,7 +37,7 @@ impl Buffer {
     }
 
     pub fn move_down(&mut self) {
-        self.y = min(self.lines.len() as i32, self.y + 1);
+        self.y = min((self.lines.len() - 1) as i32, self.y + 1);
         self.row = self.y;
         self.x = min(self.eol(), self.col);
     }
@@ -64,11 +61,6 @@ impl Buffer {
     pub fn move_eol(&mut self) {
         self.x = self.eol();
         self.col = 999999999;
-    }
-
-    pub fn move_down_by(&mut self, y: i32) {
-        self.y = max(0, self.y + y);
-        self.row = self.y;
     }
 
     // private

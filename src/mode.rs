@@ -1,9 +1,7 @@
-pub struct Mode {
-    
-}
+pub struct Mode;
 
 impl Mode {
-    pub fn new() -> Mode {
+    pub fn normal() -> Mode {
         Mode {
             
         }

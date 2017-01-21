@@ -2,14 +2,13 @@ extern crate libc;
 extern crate ncurses;
 extern crate termkey;
 
-use std::default::Default;
 use std::{env};
-use std::io::{Write, stdout, stdin};
 use ncurses::*;
 use termkey::*;
 
 use editor::Editor;
 
+// structs
 mod editor;
 mod buffer;
 mod pane;
@@ -19,7 +18,7 @@ fn main() {
     initscr();
     noecho();
     cbreak();
-    keypad(stdscr(), true);
+    // keypad(stdscr(), true);
 
     let mut tk = TermKey::new(0, c::TERMKEY_FLAG_CTRLC);
     let ed = &mut Editor::new();

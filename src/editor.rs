@@ -12,9 +12,10 @@ pub struct Editor {
     panes: Vec<Pane>,
 }
 
+
 impl Editor {
     pub fn new() -> Editor {
-        let mut welcome = Buffer::new();
+        let welcome = Buffer::new();
         Editor {
             panes: vec![Pane::new(1)],
             buffers: vec![welcome],
@@ -36,19 +37,19 @@ impl Editor {
                 self.buffers[pane.buffer_index].move_left();
             },
             "j" => {
-                let ref mut win = self.panes[0];
-                let ref mut buf = self.buffers[win.buffer_index];
+                let ref mut pane = self.panes[0];
+                let ref mut buf = self.buffers[pane.buffer_index];
                 buf.move_down();
-                if buf.y >= (win.y + Editor::get_max_y()) {
-                    win.scroll_down();
+                if buf.y >= (pane.y + Editor::get_max_y() - 2) {
+                    pane.scroll_down();
                 }
             },
             "k" => {
-                let ref mut win = self.panes[0];
-                let ref mut buf = self.buffers[win.buffer_index];
+                let ref mut pane = self.panes[0];
+                let ref mut buf = self.buffers[pane.buffer_index];
                 buf.move_up();
-                if buf.y < win.y {
-                    win.scroll_up();
+                if buf.y < pane.y {
+                    pane.scroll_up();
                 }
             },
             "l" => {
@@ -60,16 +61,24 @@ impl Editor {
                 std::process::exit(0);
             },
             "<C-f>" => {
-                let ref mut win = self.panes[0];
-                let ref mut buf = self.buffers[win.buffer_index];
-                buf.move_down_by(Editor::get_max_y());
-                win.scroll_by(Editor::get_max_y());
+                let ref mut pane = self.panes[0];
+                let ref mut buf = self.buffers[pane.buffer_index];
+                for _ in 1..(Editor::get_max_y()) {
+                    buf.move_down();
+                    if buf.y >= (pane.y + Editor::get_max_y() - 2) {
+                        pane.scroll_down();
+                    }
+                }
             },
             "<C-b>" => {
-                let ref mut win = self.panes[0];
-                let ref mut buf = self.buffers[win.buffer_index];
-                buf.move_down_by(Editor::get_max_y() * -1);
-                win.scroll_by(Editor::get_max_y() * -1);
+                let ref mut pane = self.panes[0];
+                let ref mut buf = self.buffers[pane.buffer_index];
+                for _ in 1..(Editor::get_max_y()) {
+                    buf.move_up();
+                    if buf.y < pane.y {
+                        pane.scroll_up();
+                    }
+                }
             }
             _ => ()
         }
@@ -85,28 +94,29 @@ impl Editor {
                 }
                 self.buffers.push(buf);
             },
-            Err(e) => ()
+            Err(_) => ()
         }
     }
 
     pub fn draw(&self) {
         let ref buf = self.buffers[1];
-        let ref win = self.panes[0];
-        let y = win.y - buf.y;
-        let x = buf.x;
-        let lines = buf.lines.iter().skip(win.y as usize).take(Editor::get_max_y() as usize);
+        let ref pane = self.panes[0];
+        let mut max_y = 0;
+        let mut max_x = 0;
+        getmaxyx(stdscr(), &mut max_y, &mut max_x);
+        let lines = buf.lines.iter().skip(pane.y as usize).take(max_y as usize);
         for (index, line) in lines.enumerate() {
-            mv(index as i32, 0);
-            clrtoeol();
-            addstr(line);
+            wmove(pane.window, (index + 1) as i32, 0);
+            wclrtoeol(pane.window);
+            waddstr(pane.window, format!(" {}", line).as_str());
         }
-        mv(buf.y - win.y, buf.x);
-        refresh();
+        box_(pane.window, 0, 0);
+        wresize(pane.window, max_y, max_x);
+        wmove(pane.window, (buf.y - pane.y) + 1, buf.x + 1);
+        wrefresh(pane.window);
     }
 
-    // Private
-
-    fn get_max_y() -> i32 {
+    pub fn get_max_y() -> i32 {
         let mut max_y = 0;
         let mut max_x = 0;
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
