@@ -2,13 +2,12 @@ use std;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
+use std::io::Write;
 use ncurses::*;
 
 use buffer::Buffer;
 use pane::Pane;
 
-static COLOR_BACKGROUND: i16 = 16;
-static COLOR_FOREGROUND: i16 = 17;
 static COLOR_PAIR_DEFAULT: i16 = 1;
 
 pub struct Editor {
@@ -16,10 +15,9 @@ pub struct Editor {
     panes: Vec<Pane>,
 }
 
-
 impl Editor {
     pub fn new() -> Editor {
-        let welcome = Buffer::new();
+        let welcome = Buffer::new("".to_string());
         Editor {
             panes: vec![Pane::new(1)],
             buffers: vec![welcome],
@@ -85,15 +83,18 @@ impl Editor {
                         pane.scroll_up();
                     }
                 }
+            },
+            "<C-s>" => {
+                self.save()
             }
             _ => ()
         }
     }
 
     pub fn open(&mut self, path: String) {
-        match File::open(path) {
+        match File::open(&path) {
             Ok(f) => {
-                let mut buf = Buffer::new();
+                let mut buf = Buffer::new(path);
                 let reader = BufReader::new(f);
                 for line in reader.lines() {
                     buf.append_line(line.unwrap());
@@ -104,9 +105,17 @@ impl Editor {
         }
     }
 
+    pub fn save(&mut self) {
+        let ref buf = self.buffers[1];
+        match File::create(&buf.path) {
+            Ok(mut f) => {
+                f.write_all(buf.lines.join("\n").as_bytes());
+            },
+            Err(_) => ()
+        }
+    }
+
     pub fn draw(&self) {
-        start_color();
-        use_default_colors();
         init_pair(COLOR_PAIR_DEFAULT, 3, -1);
 
         let ref buf = self.buffers[1];

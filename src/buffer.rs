@@ -6,16 +6,18 @@ pub struct Buffer {
     pub y: i32,
     pub col: i32,
     pub row: i32,
+    pub path: String,
 }
 
 impl Buffer {
-    pub fn new() -> Buffer {
+    pub fn new(path: String) -> Buffer {
         Buffer {
             lines: vec![],
             x: 0,
             y: 0,
             col: 0,
             row: 0,
+            path: path,
         }
     }
 
@@ -32,8 +34,12 @@ impl Buffer {
     }
 
     pub fn move_left(&mut self) {
-        self.x = max(0, self.x - 1);
-        self.col = self.x;
+        if self.x <= 0 {
+            self.x = 0;
+        } else {
+            self.x = self.x - 1;
+            self.col = self.x;
+        }
     }
 
     pub fn move_down(&mut self) {
@@ -49,8 +55,12 @@ impl Buffer {
     }
 
     pub fn move_right(&mut self) {
-        self.x = min(self.eol(), self.x + 1);
-        self.col = self.x;
+        if self.x >= self.eol() {
+            self.x = self.eol()
+        } else {
+            self.x = self.x + 1;
+            self.col = self.x;
+        }
     }
 
     pub fn move_bol(&mut self) {

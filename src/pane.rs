@@ -1,8 +1,5 @@
-use std::cmp::{min, max};
 use ncurses::*;
 
-use editor::Editor;
-use buffer::Buffer;
 use mode::Mode;
 
 pub struct Pane {

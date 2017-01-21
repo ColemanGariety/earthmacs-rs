@@ -18,6 +18,8 @@ fn main() {
     noecho();
     cbreak();
     keypad(stdscr(), true);
+    start_color();
+    use_default_colors();
 
     let mut tk = TermKey::new(0, c::TERMKEY_FLAG_CTRLC);
     let ed = &mut Editor::new();
