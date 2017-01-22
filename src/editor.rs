@@ -57,7 +57,7 @@ impl Editor {
         wrefresh(buf.window);
     }
 
-    pub fn get_max_y() -> i32 {
+    pub fn height() -> i32 {
         let mut max_y = 0;
         let mut max_x = 0;
         getmaxyx(stdscr(), &mut max_y, &mut max_x);

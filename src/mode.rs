@@ -1,70 +1,41 @@
 use std;
-use std::io::Write;
-use editor::Editor;
 use buffer::Buffer;
 use ncurses::*;
 
 impl Buffer {
     pub fn handle_normal(&mut self, key: &str) {
         match key {
-            "$" => {
-                self.move_eol();
-            },
-            "0" => {
-                self.move_bol();
-            },
+            "$" => { self.move_eol(); },
+            "0" => { self.move_bol(); },
             "A" => {
                 self.mode = "insert".to_string();
-                let y = self.cursor_y;
                 self.move_eol();
             },
-            "d" => {
-                self.mode = "delete".to_string();
+            "d" => { self.mode = "delete".to_string(); },
+            "f" => { self.mode = "find_char".to_string(); },
+            "G" => { self.move_eof(); }
+            "h" => { self.move_left(); },
+            "i" => { self.mode = "insert".to_string(); }
+            "j" => { self.move_down(); },
+            "k" => { self.move_up(); },
+            "l" => { self.move_right(); },
+            "r" => { self.mode = "replace".to_string() },
+            "x" => {
+                let x = self.cursor_x;
+                let y = self.cursor_y;
+                self.remove(x, y);
+                if x == self.eol() + 1 {
+                    self.move_left();
+                }
             }
-            "h" => {
-                self.move_left();
-            },
-            "i" => {
-                self.mode = "insert".to_string();
-            }
-            "j" => {
-                self.move_down();
-                if self.cursor_y >= (self.scroll_y + Editor::get_max_y() - 2) {
-                    self.scroll_down();
-                }
-            },
-            "k" => {
-                self.move_up();
-                if self.cursor_y < self.scroll_y {
-                    self.scroll_up();
-                }
-            },
-            "l" => {
-                self.move_right();
-            },
-            "<C-c>" => {
-                endwin();
-                std::process::exit(0);
-            },
-            "<C-f>" => {
-                for _ in 1..(Editor::get_max_y() - 2) {
-                    self.move_down();
-                    if self.cursor_y >= (self.scroll_y + Editor::get_max_y() - 2) {
-                        self.scroll_down();
-                    }
-                }
-            },
-            "<C-b>" => {
-                for _ in 1..(Editor::get_max_y() - 2) {
-                    self.move_up();
-                    if self.cursor_y < self.scroll_y {
-                        self.scroll_up();
-                    }
-                }
-            },
-            "<C-s>" => {
-                self.save();
-            }
+            "<C-c>" => { endwin(); std::process::exit(0); },
+            "<C-f>" => { self.page_down() },
+            "<C-b>" => { self.page_up() },
+            "<C-s>" => { self.save(); },
+            // "<M-H>" => { self.split_vertical(); },
+            // "<M-J>" => { self.split_horizontal(); },
+            // "<M-K>" => { self.split_vertical(); },
+            // "<M-L>" => { self.split_horizontal(); },
             _ => ()
         }
     }
@@ -91,33 +62,63 @@ impl Buffer {
                 self.move_left();
             },
             "<DEL>" => {
-                let y = self.cursor_y as usize;
-                let x = self.cursor_x as usize;
-                let line = self.lines[y].clone();
+                let x = self.cursor_x.clone();
+                let y = self.cursor_y.clone();
                 if x == 0 {
-                    self.remove_line(y as usize);
                     self.move_up();
                     self.move_eol();
                 } else {
-                    let (a, b) = line.split_at(x - 1);
-                    self.lines[y] = a.to_string() + &(b.to_string())[1..];
                     self.move_left();
                 }
+                self.remove(x - 1, y);
             },
             "<Enter>" => {
-                let y = self.cursor_y;
-                self.insert_line("".to_string(), (y + 1) as usize);
+                self.insert_line();
                 self.move_down();
+                self.move_bol();
+            },
+            _ => {
+                self.insert(key);
+                self.cursor_x += 1;
+                self.col += 1;
+            }
+        }
+    }
+
+    pub fn handle_find_char(&mut self, key: &str) {
+        match key {
+            "<Escape>" => {
+                self.mode = "normal".to_string();
+                self.move_left();
             },
             _ => {
                 let y = self.cursor_y as usize;
                 let x = self.cursor_x as usize;
-                let line = self.lines[y].clone();
-                let (a, b) = line.split_at(x);
-                self.lines[y] = format!("{}{}{}", a, key, b);
-                self.cursor_x += 1;
-                self.col += 1;
+                match self.lines[y].chars().skip(x + 1).position(|c| char::to_string(&c).as_str() == key) {
+                    Some(i) => {
+                        self.cursor_x += (i + 1) as i32;
+                        self.col += (i + 1) as i32;
+                    },
+                    _ => ()
+                }
+                self.mode = "normal".to_string();
             }
+        }
+    }
+
+    pub fn handle_replace(&mut self, key: &str) {
+        match key {
+            "<Escape>" => {
+                self.mode = "normal".to_string();
+                self.move_left();
+            },
+            _ => {
+                let x = self.cursor_x;
+                let y = self.cursor_y;
+                self.remove(x, y);
+                self.insert(key);
+                self.mode = "normal".to_string();
+            },
         }
     }
 }
