@@ -1,47 +1,93 @@
+use std::cmp::{min, max};
 use std;
+use window::Window;
 use buffer::Buffer;
 use ncurses::*;
 
-impl Buffer {
-    pub fn handle_normal(&mut self, key: &str) {
+impl Window {
+    pub fn handle_normal(&mut self, key: &str, buffer: &mut Buffer) {
         match key {
-            "$" => { self.move_eol(); },
+            "$" => {
+                self.cursor_x = buffer.eol(self.cursor_y);
+                self.col = 99999999;
+            },
             "0" => { self.move_bol(); },
             "A" => {
                 self.mode = "insert".to_string();
-                self.move_eol();
+                while self.cursor_x < buffer.lines[self.cursor_y as usize].len() as i32 {
+                    self.move_right();
+                }
             },
             "d" => { self.mode = "delete".to_string(); },
             "f" => { self.mode = "find_char".to_string(); },
-            "G" => { self.move_eof(); }
-            "h" => { self.move_left(); },
+            "G" => {
+                while self.scroll_y < buffer.lines.len() as i32 { // 
+                    self.move_down();
+                }
+            }
+            "h" => {
+                if self.cursor_x > 0 {
+                    self.move_left();
+                }
+            },
             "i" => { self.mode = "insert".to_string(); }
-            "j" => { self.move_down(); },
-            "k" => { self.move_up(); },
-            "l" => { self.move_right(); },
+            "j" => {
+                if self.cursor_y < (buffer.eof() - 1) {
+                    self.move_down();
+                    self.cursor_x  = min(buffer.eol(self.cursor_y), self.col);
+                }
+            },
+            "k" => {
+                if self.cursor_y > 0 {
+                    self.move_up();
+                    self.cursor_x  = min(buffer.eol(self.cursor_y), self.col);
+                }
+            },
+            "l" => {
+                if self.cursor_x < buffer.eol(self.cursor_y) {
+                    self.move_right();
+                }
+            },
             "r" => { self.mode = "replace".to_string() },
             "x" => {
                 let x = self.cursor_x;
                 let y = self.cursor_y;
-                self.remove(x, y);
-                if x == self.eol() + 1 {
+                buffer.remove(x, y);
+                if x == buffer.eol(y) + 1 {
                     self.move_left();
                 }
             }
-            "<C-b>" => { self.page_up() },
+            "<C-b>" => {
+                for _ in 1..(self.real_height() - 2) {
+                    self.move_up();
+                    if self.cursor_y < self.scroll_y {
+                        self.scroll_up();
+                    }
+                }
+            },
             "<C-c>" => { endwin(); std::process::exit(0); },
-            "<C-f>" => { self.page_down() },
-            "<C-q>" => { self.destroy_active_window()},
-            "<C-s>" => { self.save(); },
-            "<M-H>" => { self.get_active_window().split_horizontally(); },
-            "<M-J>" => { self.get_active_window().split_vertically(); },
-            "<M-K>" => { self.get_active_window().split_vertically(); },
-            "<M-L>" => { self.get_active_window().split_horizontally(); },
+            "<C-f>" => {
+                for _ in 1..((self.real_height()) - 2) {
+                    if self.cursor_y < (buffer.eof() - 1) {
+                        self.move_down();
+                        self.cursor_x  = min(buffer.eol(self.cursor_y), self.col);
+                        if self.cursor_y >= (self.scroll_y + self.height - 2) {
+                            self.scroll_down();
+                        }
+                    }
+                }
+            },
+            // "<C-q>" => { self.destroy_active_window()},
+            "<C-s>" => { buffer.save(); },
+            "<M-H>" => { self.split_horizontally(); },
+            "<M-J>" => { self.split_vertically(); },
+            "<M-K>" => { self.split_vertically(); },
+            "<M-L>" => { self.split_horizontally(); },
             _ => ()
         }
     }
 
-    pub fn handle_delete(&mut self, key: &str) {
+    pub fn handle_delete(&mut self, key: &str, buffer: &mut Buffer) {
         match key {
             "<Escape>" => {
                 self.mode = "normal".to_string();
@@ -49,14 +95,14 @@ impl Buffer {
             },
             "d" => {
                 let row = self.cursor_y;
-                self.remove_line(row as usize);
+                buffer.remove_line(row as usize);
                 self.mode = "normal".to_string();
             },
             _ => ()
         }
     }
 
-    pub fn handle_insert(&mut self, key: &str) {
+    pub fn handle_insert(&mut self, key: &str, buffer: &mut Buffer) {
         match key {
             "<Escape>" => {
                 self.mode = "normal".to_string();
@@ -67,26 +113,28 @@ impl Buffer {
                 let y = self.cursor_y.clone();
                 if x == 0 {
                     self.move_up();
-                    self.move_eol();
+                    while self.cursor_x < buffer.lines[self.cursor_y as usize].len() as i32 {
+                        self.move_right();
+                    }
                 } else {
                     self.move_left();
                 }
-                self.remove(x - 1, y);
+                buffer.remove(x - 1, y);
             },
             "<Enter>" => {
-                self.insert_line();
+                buffer.insert_newline(self.cursor_x, self.cursor_y);
                 self.move_down();
                 self.move_bol();
             },
             _ => {
-                self.insert(key);
+                buffer.insert(key, self.cursor_x, self.cursor_y);
                 self.cursor_x += 1;
                 self.col += 1;
             }
         }
     }
 
-    pub fn handle_find_char(&mut self, key: &str) {
+    pub fn handle_find_char(&mut self, key: &str, buffer: &mut Buffer) {
         match key {
             "<Escape>" => {
                 self.mode = "normal".to_string();
@@ -95,7 +143,7 @@ impl Buffer {
             _ => {
                 let y = self.cursor_y as usize;
                 let x = self.cursor_x as usize;
-                match self.lines[y].chars().skip(x + 1).position(|c| char::to_string(&c).as_str() == key) {
+                match buffer.lines[y].chars().skip(x + 1).position(|c| char::to_string(&c).as_str() == key) {
                     Some(i) => {
                         self.cursor_x += (i + 1) as i32;
                         self.col += (i + 1) as i32;
@@ -107,7 +155,7 @@ impl Buffer {
         }
     }
 
-    pub fn handle_replace(&mut self, key: &str) {
+    pub fn handle_replace(&mut self, key: &str, buffer: &mut Buffer) {
         match key {
             "<Escape>" => {
                 self.mode = "normal".to_string();
@@ -116,8 +164,8 @@ impl Buffer {
             _ => {
                 let x = self.cursor_x;
                 let y = self.cursor_y;
-                self.remove(x, y);
-                self.insert(key);
+                buffer.remove(x, y);
+                buffer.insert(key, x, y);
                 self.mode = "normal".to_string();
             },
         }
