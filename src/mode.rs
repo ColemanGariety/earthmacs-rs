@@ -28,14 +28,15 @@ impl Buffer {
                     self.move_left();
                 }
             }
+            "<C-b>" => { self.page_up() },
             "<C-c>" => { endwin(); std::process::exit(0); },
             "<C-f>" => { self.page_down() },
-            "<C-b>" => { self.page_up() },
+            "<C-q>" => { self.destroy_active_window()},
             "<C-s>" => { self.save(); },
-            // "<M-H>" => { self.split_vertical(); },
-            // "<M-J>" => { self.split_horizontal(); },
-            // "<M-K>" => { self.split_vertical(); },
-            // "<M-L>" => { self.split_horizontal(); },
+            "<M-H>" => { self.get_active_window().split_horizontally(); },
+            "<M-J>" => { self.get_active_window().split_vertically(); },
+            "<M-K>" => { self.get_active_window().split_vertically(); },
+            "<M-L>" => { self.get_active_window().split_horizontally(); },
             _ => ()
         }
     }

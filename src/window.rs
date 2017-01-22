@@ -7,6 +7,7 @@ pub struct Window {
     pub height: i32,
     pub pane: *mut i8,
     pub scroll_y: i32,
+    pub split: String,
 }
 
 impl Window {
@@ -18,19 +19,46 @@ impl Window {
             height: height,
             scroll_y: 0,
             pane: subwin(stdscr(), 0, 0, 0, 0),
+            split: "none".to_string(),
         }
     }
 
     pub fn split_horizontally(&mut self) -> Window {
         self.width = self.width / 2;
+        self.split = "horizontal".to_string();
         Window {
             x: self.width,
             y: self.y,
             width: self.width,
             height: self.height,
             scroll_y: 0,
-            pane: subwin(stdscr(), 0, 0, 0, 0)
+            pane: subwin(stdscr(), 0, 0, 0, 0),
+            split: "horizontal".to_string(),
         }
+    }
+
+    pub fn split_vertically(&mut self) -> Window {
+        self.height = self.height / 2;
+        self.split = "vertical".to_string();
+        Window {
+            x: self.x,
+            y: self.height,
+            width: self.width,
+            height: self.height,
+            scroll_y: self.scroll_y,
+            pane: subwin(stdscr(), 0, 0, 0, 0),
+            split: "horizontal".to_string(),
+        }
+    }
+
+    pub fn unsplit_horizontally(&mut self) {
+        self.split = "none".to_string();
+        self.width = self.width * 2;
+    }
+
+    pub fn unsplit_vertically(&mut self) {
+        self.split = "none".to_string();
+        self.height = self.height * 2;
     }
 
     pub fn real_height(&mut self) -> i32 {

@@ -35,7 +35,7 @@ fn main() {
             if p == 0 {
                 match tk.getkey_force() {
                     TermKeyResult::Key(key) => {
-                        ed.buffers[0].handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM))
+                        ed.handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM))
                     }
                     _ => {}
                 }
@@ -43,7 +43,7 @@ fn main() {
             if p > 0 { tk.advisereadable(); }
             match tk.getkey() {
                 TermKeyResult::Key(key) => {
-                    ed.buffers[0].handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM));
+                    ed.handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM));
                 },
                 _ => {
                     wait = tk.get_waittime() as i32;

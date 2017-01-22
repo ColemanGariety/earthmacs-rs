@@ -1,7 +1,6 @@
 use std::cmp::{min, max};
 use std::fs::File;
 use std::io::Write;
-use editor::Editor;
 use window::Window;
 
 pub struct Buffer {
@@ -40,17 +39,6 @@ impl Buffer {
                 };
             },
             Err(_) => ()
-        }
-    }
-
-    pub fn handle_input(&mut self, key: &str) {
-        match self.mode.as_str() {
-            "normal" => { self.handle_normal(key); },
-            "delete" => { self.handle_delete(key); },
-            "insert" => { self.handle_insert(key); },
-            "find_char" => { self.handle_find_char(key); },
-            "replace" => { self.handle_replace(key); },
-            _ => ()
         }
     }
 
@@ -99,7 +87,7 @@ impl Buffer {
         self.cursor_y = min((self.lines.len() - 1) as i32, self.cursor_y + 1);
         self.row = self.cursor_y;
         self.cursor_x = min(self.eol(), self.col);
-        if self.cursor_y >= (self.active_window().scroll_y + (self.active_window().real_height()) - 2) {
+        if self.cursor_y >= (self.get_active_window().scroll_y + (self.get_active_window().real_height()) - 2) {
             self.scroll_down();
         }
     }
@@ -108,7 +96,7 @@ impl Buffer {
         self.cursor_y = max(0, self.cursor_y - 1);
         self.row = self.cursor_y;
         self.cursor_x = min(self.eol(), self.col);
-        if self.cursor_y < self.active_window().scroll_y {
+        if self.cursor_y < self.get_active_window().scroll_y {
             self.scroll_up();
         }
     }
@@ -133,32 +121,32 @@ impl Buffer {
     }
 
     pub fn move_eof(&mut self) {
-        for _ in 0..(self.lines.len() - self.active_window().scroll_y as usize) {
+        for _ in 0..(self.lines.len() - self.get_active_window().scroll_y as usize) {
             self.move_down();
         }
     }
 
     pub fn scroll_down(&mut self) {
-        self.active_window().scroll_y += 1;
+        self.get_active_window().scroll_y += 1;
     }
 
     pub fn scroll_up(&mut self) {
-        self.active_window().scroll_y -= 1;
+        self.get_active_window().scroll_y -= 1;
     }
 
     pub fn page_down(&mut self) {
-        for _ in 1..(Editor::height() - 2) {
+        for _ in 1..((self.get_active_window().height) - 2) {
             self.move_down();
-            if self.cursor_y >= (self.active_window().scroll_y + Editor::height() - 2) {
+            if self.cursor_y >= (self.get_active_window().scroll_y + self.get_active_window().height - 2) {
                 self.scroll_down();
             }
         }
     }
 
     pub fn page_up(&mut self) {
-        for _ in 1..(Editor::height() - 2) {
+        for _ in 1..(self.get_active_window().height - 2) {
             self.move_up();
-            if self.cursor_y < self.active_window().scroll_y {
+            if self.cursor_y < self.get_active_window().scroll_y {
                 self.scroll_up();
             }
         }
@@ -168,11 +156,25 @@ impl Buffer {
         max(0, (self.lines[self.cursor_y as usize].len() as i32) - 1)
     }
 
-    // private
-
-    fn active_window(&mut self) -> &mut Window {
+    pub fn get_active_window(&mut self) -> &mut Window {
         &mut self.windows[self.active_window as usize]
     }
+
+    pub fn destroy_active_window(&mut self) {
+        self.windows.remove(self.active_window as usize);
+        self.active_window = max(0, self.active_window - 1);
+        match self.get_active_window().split.as_str() {
+            "horizontal" => {
+                self.get_active_window().unsplit_horizontally();
+            },
+            "vertical" => {
+                self.get_active_window().unsplit_vertically();
+            },
+            "none" | _ => ()
+        }
+    }
+
+    // private
 
     fn rem_tabs(line: String) -> String {
         line.replace("\t", "    ")

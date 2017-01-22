@@ -9,14 +9,34 @@ static COLOR_PAIR_DEFAULT: i16 = 1;
 
 pub struct Editor {
     pub buffers: Vec<Buffer>,
+    pub active_buffer: i32,
 }
 
 impl Editor {
     pub fn new() -> Editor {
         Editor {
             buffers: vec![],
+            active_buffer: 0,
         }
     }
+
+    pub fn handle_input(&mut self, key: &str) {
+        match key {
+            // "<M-l>" => { self.activate_buffer_right() },
+            _ => {
+                let active_buffer = self.get_active_buffer();
+                match active_buffer.mode.as_str() {
+                    "normal" => { active_buffer.handle_normal(key); },
+                    "delete" => { active_buffer.handle_delete(key); },
+                    "insert" => { active_buffer.handle_insert(key); },
+                    "find_char" => { active_buffer.handle_find_char(key); },
+                    "replace" => { active_buffer.handle_replace(key); },
+                    _ => ()
+                }
+            }
+        }
+    }
+
 
     pub fn open(&mut self, path: String) {
         match File::open(&path) {
@@ -71,10 +91,7 @@ impl Editor {
         }
     }
 
-    pub fn height() -> i32 {
-        let mut max_y = 0;
-        let mut max_x = 0;
-        getmaxyx(stdscr(), &mut max_y, &mut max_x);
-        max_y
+    fn get_active_buffer(&mut self) -> &mut Buffer {
+        &mut self.buffers[self.active_buffer as usize]
     }
 }
