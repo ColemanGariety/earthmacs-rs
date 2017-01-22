@@ -25,7 +25,7 @@ impl Buffer {
             col: 0,
             row: 0,
             path: path,
-            windows: vec![Window::new(0, 0, 100, 100)],
+            windows: vec![Window::new(0, 0, 100, 40)],
             mode: "normal".to_string(),
             active_window: 1,
         }

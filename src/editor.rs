@@ -6,7 +6,6 @@ use ncurses::*;
 use buffer::Buffer;
 
 static COLOR_PAIR_DEFAULT: i16 = 1;
-static COLOR_PAIR_ACTIVE: i16 = 2;
 
 pub struct Editor {
     pub buffers: Vec<Buffer>,
@@ -38,14 +37,13 @@ impl Editor {
 
     pub fn draw(&mut self) {
         for buffer in &mut self.buffers {
-            for (index, window) in buffer.windows.iter_mut().enumerate() {
-                init_pair(COLOR_PAIR_ACTIVE, 4, -1);
-                init_pair(COLOR_PAIR_DEFAULT, 1, -1);
+            for window in &mut buffer.windows {
+                init_pair(COLOR_PAIR_DEFAULT, 3, -1);
 
                 let mut max_y = 0;
                 let mut max_x = 0;
                 getmaxyx(window.pane, &mut max_y, &mut max_x);
-                let lines = buffer.lines.iter().skip(window.scroll_y as usize).take(window.real_height() as usize);
+                let lines = buffer.lines.iter().skip(window.scroll_y as usize).take(window.height as usize);
 
                 for (index, line) in lines.enumerate() {
                     wmove(window.pane, (index + 1) as i32, 0);
@@ -57,19 +55,9 @@ impl Editor {
                 wmove(window.pane, (buffer.cursor_y - window.scroll_y) + 1, buffer.cursor_x + 1);
                 wresize(window.pane, window.real_height(), window.real_width());
                 mvwin(window.pane, window.real_y(), window.real_x());
-                if index == buffer.active_window as usize {
-                    wattron(window.pane, COLOR_PAIR(COLOR_PAIR_ACTIVE));
-                }
+                wattron(window.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
                 box_(window.pane, 0, 0);
-                if index == buffer.active_window as usize {
-                    wattroff(window.pane, COLOR_PAIR(COLOR_PAIR_ACTIVE));
-                }
-            }
-        }
-
-        for buffer in &self.buffers {
-            for window in &buffer.windows {
-                refresh();
+                wattroff(window.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
                 wrefresh(window.pane);
             }
         }
