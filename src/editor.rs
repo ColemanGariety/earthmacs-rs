@@ -37,12 +37,10 @@ impl Editor {
 
     pub fn draw(&mut self) {
         for buffer in &mut self.buffers {
-            for window in &mut buffer.windows {
+            for (id, window) in buffer.windows.iter_mut().enumerate() {
+                refresh();
                 init_pair(COLOR_PAIR_DEFAULT, 3, -1);
 
-                let mut max_y = 0;
-                let mut max_x = 0;
-                getmaxyx(window.pane, &mut max_y, &mut max_x);
                 let lines = buffer.lines.iter().skip(window.scroll_y as usize).take(window.height as usize);
 
                 for (index, line) in lines.enumerate() {
@@ -55,9 +53,12 @@ impl Editor {
                 wmove(window.pane, (buffer.cursor_y - window.scroll_y) + 1, buffer.cursor_x + 1);
                 wresize(window.pane, window.real_height(), window.real_width());
                 mvwin(window.pane, window.real_y(), window.real_x());
-                wattron(window.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
+                if id == buffer.active_window as usize {
+                    wattron(window.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
+                }
                 box_(window.pane, 0, 0);
                 wattroff(window.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
+                refresh();
                 wrefresh(window.pane);
             }
         }

@@ -17,7 +17,7 @@ impl Window {
             width: width,
             height: height,
             scroll_y: 0,
-            pane: subwin(stdscr(), height, width, y, x),
+            pane: subwin(stdscr(), 0, 0, 0, 0),
         }
     }
 
