@@ -1,36 +1,33 @@
-use ncurses::*;
 use std::cmp::{min, max};
 use std::fs::File;
 use std::io::Write;
 use editor::Editor;
+use window::Window;
 
 pub struct Buffer {
     pub lines: Vec<String>,
     pub cursor_x: i32,
     pub cursor_y: i32,
-    pub scroll_y: i32,
     pub col: i32,
     pub row: i32,
     pub path: String,
-    pub window: *mut i8,
+    pub windows: Vec<Window>,
     pub mode: String,
+    pub active_window: i32,
 }
 
 impl Buffer {
     pub fn new(path: String) -> Buffer {
-        let mut max_x = 0;
-        let mut max_y = 0;
-        getmaxyx(stdscr(), &mut max_y, &mut max_x);
         Buffer {
             lines: vec![],
             cursor_x: 0,
             cursor_y: 0,
-            scroll_y: 0,
             col: 0,
             row: 0,
             path: path,
-            window: subwin(stdscr(), max_y, max_x, 0, 0),
+            windows: vec![Window::new(0, 0, 100, 100)],
             mode: "normal".to_string(),
+            active_window: 1,
         }
     }
 
@@ -102,7 +99,7 @@ impl Buffer {
         self.cursor_y = min((self.lines.len() - 1) as i32, self.cursor_y + 1);
         self.row = self.cursor_y;
         self.cursor_x = min(self.eol(), self.col);
-        if self.cursor_y >= (self.scroll_y + Editor::height() - 2) {
+        if self.cursor_y >= (self.windows[1].scroll_y + (self.windows[1].real_height()) - 2) {
             self.scroll_down();
         }
     }
@@ -111,7 +108,7 @@ impl Buffer {
         self.cursor_y = max(0, self.cursor_y - 1);
         self.row = self.cursor_y;
         self.cursor_x = min(self.eol(), self.col);
-        if self.cursor_y < self.scroll_y {
+        if self.cursor_y < self.windows[1].scroll_y {
             self.scroll_up();
         }
     }
@@ -136,23 +133,23 @@ impl Buffer {
     }
 
     pub fn move_eof(&mut self) {
-        for _ in 0..(self.lines.len() - self.scroll_y as usize) {
+        for _ in 0..(self.lines.len() - self.windows[1].scroll_y as usize) {
             self.move_down();
         }
     }
 
     pub fn scroll_down(&mut self) {
-        self.scroll_y += 1;
+        self.windows[1].scroll_y += 1;
     }
 
     pub fn scroll_up(&mut self) {
-        self.scroll_y -= 1;
+        self.windows[1].scroll_y -= 1;
     }
 
     pub fn page_down(&mut self) {
         for _ in 1..(Editor::height() - 2) {
             self.move_down();
-            if self.cursor_y >= (self.scroll_y + Editor::height() - 2) {
+            if self.cursor_y >= (self.windows[1].scroll_y + Editor::height() - 2) {
                 self.scroll_down();
             }
         }
@@ -161,7 +158,7 @@ impl Buffer {
     pub fn page_up(&mut self) {
         for _ in 1..(Editor::height() - 2) {
             self.move_up();
-            if self.cursor_y < self.scroll_y {
+            if self.cursor_y < self.windows[1].scroll_y {
                 self.scroll_up();
             }
         }

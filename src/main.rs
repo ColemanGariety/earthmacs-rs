@@ -11,6 +11,7 @@ mod editor;
 mod mode;
 mod buffer;
 mod poll;
+mod window;
 
 fn main() {
     initscr();
@@ -27,6 +28,7 @@ fn main() {
         let mut tk = TermKey::new(0, c::TERMKEY_FLAG_CTRLC);
         let mut wait = -1;
 
+        ed.draw();
         loop {
             ed.draw();
             let p = poll::poll_rd1(0, wait);
