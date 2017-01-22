@@ -27,7 +27,7 @@ impl Buffer {
             path: path,
             windows: vec![Window::new(0, 0, 100, 100)],
             mode: "normal".to_string(),
-            active_window: 1,
+            active_window: 0,
         }
     }
 
@@ -99,7 +99,7 @@ impl Buffer {
         self.cursor_y = min((self.lines.len() - 1) as i32, self.cursor_y + 1);
         self.row = self.cursor_y;
         self.cursor_x = min(self.eol(), self.col);
-        if self.cursor_y >= (self.windows[1].scroll_y + (self.windows[1].real_height()) - 2) {
+        if self.cursor_y >= (self.active_window().scroll_y + (self.active_window().real_height()) - 2) {
             self.scroll_down();
         }
     }
@@ -108,7 +108,7 @@ impl Buffer {
         self.cursor_y = max(0, self.cursor_y - 1);
         self.row = self.cursor_y;
         self.cursor_x = min(self.eol(), self.col);
-        if self.cursor_y < self.windows[1].scroll_y {
+        if self.cursor_y < self.active_window().scroll_y {
             self.scroll_up();
         }
     }
@@ -133,23 +133,23 @@ impl Buffer {
     }
 
     pub fn move_eof(&mut self) {
-        for _ in 0..(self.lines.len() - self.windows[1].scroll_y as usize) {
+        for _ in 0..(self.lines.len() - self.active_window().scroll_y as usize) {
             self.move_down();
         }
     }
 
     pub fn scroll_down(&mut self) {
-        self.windows[1].scroll_y += 1;
+        self.active_window().scroll_y += 1;
     }
 
     pub fn scroll_up(&mut self) {
-        self.windows[1].scroll_y -= 1;
+        self.active_window().scroll_y -= 1;
     }
 
     pub fn page_down(&mut self) {
         for _ in 1..(Editor::height() - 2) {
             self.move_down();
-            if self.cursor_y >= (self.windows[1].scroll_y + Editor::height() - 2) {
+            if self.cursor_y >= (self.active_window().scroll_y + Editor::height() - 2) {
                 self.scroll_down();
             }
         }
@@ -158,7 +158,7 @@ impl Buffer {
     pub fn page_up(&mut self) {
         for _ in 1..(Editor::height() - 2) {
             self.move_up();
-            if self.cursor_y < self.windows[1].scroll_y {
+            if self.cursor_y < self.active_window().scroll_y {
                 self.scroll_up();
             }
         }
@@ -169,6 +169,10 @@ impl Buffer {
     }
 
     // private
+
+    fn active_window(&mut self) -> &mut Window {
+        &mut self.windows[self.active_window as usize]
+    }
 
     fn rem_tabs(line: String) -> String {
         line.replace("\t", "    ")

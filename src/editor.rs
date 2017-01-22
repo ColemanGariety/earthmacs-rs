@@ -50,7 +50,6 @@ impl Editor {
                 }
 
                 // update cursor
-                wmove(window.pane, (buffer.cursor_y - window.scroll_y) + 1, buffer.cursor_x + 1);
                 wresize(window.pane, window.real_height(), window.real_width());
                 mvwin(window.pane, window.real_y(), window.real_x());
                 if id == buffer.active_window as usize {
@@ -58,8 +57,16 @@ impl Editor {
                 }
                 box_(window.pane, 0, 0);
                 wattroff(window.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
-                refresh();
                 wrefresh(window.pane);
+            }
+        }
+
+        for buffer in &mut self.buffers {
+            for (id, window) in buffer.windows.iter().enumerate() {
+                if id == buffer.active_window as usize {
+                    wmove(window.pane, (buffer.cursor_y - window.scroll_y) + 1, buffer.cursor_x + 1);
+                    wrefresh(window.pane);
+                }
             }
         }
     }
