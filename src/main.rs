@@ -8,6 +8,7 @@ use termkey::*;
 use editor::Editor;
 
 mod editor;
+mod mode;
 mod buffer;
 mod poll;
 
@@ -29,16 +30,12 @@ fn main() {
         loop {
             ed.draw();
             if poll::poll_rd1(0, wait) > 0 { tk.advisereadable(); }
-            loop {
-                match tk.getkey() {
-                    TermKeyResult::Key(key) => {
-                        ed.handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM));
-                    },
-                    TermKeyResult::Again => {
-                        wait = tk.get_waittime() as i32;
-                        break;
-                    },
-                    _ => { break; }
+            match tk.getkey() {
+                TermKeyResult::Key(key) => {
+                    ed.buffers[0].handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM));
+                },
+                _ => {
+                    wait = tk.get_waittime() as i32;
                 }
             }
         }

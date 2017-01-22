@@ -1,5 +1,7 @@
 use ncurses::*;
 use std::cmp::{min, max};
+use std::fs::File;
+use std::io::Write;
 
 pub struct Buffer {
     pub lines: Vec<String>,
@@ -10,6 +12,7 @@ pub struct Buffer {
     pub row: i32,
     pub path: String,
     pub window: *mut i8,
+    pub mode: String,
 }
 
 impl Buffer {
@@ -26,6 +29,25 @@ impl Buffer {
             row: 0,
             path: path,
             window: subwin(stdscr(), max_y, max_x, 0, 0),
+            mode: "normal".to_string(),
+        }
+    }
+
+    pub fn save(&self) {
+        match File::create(&self.path) {
+            Ok(mut f) => {
+                f.write_all(self.lines.join("\n").as_bytes());
+            },
+            Err(_) => ()
+        }
+    }
+
+    pub fn handle_input(&mut self, key: &str) {
+        match self.mode.as_str() {
+            "normal" => {
+                self.handle_normal(key);
+            },
+            _ => ()
         }
     }
 
