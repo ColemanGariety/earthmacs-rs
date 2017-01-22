@@ -46,6 +46,7 @@ impl Buffer {
         match self.mode.as_str() {
             "normal" => { self.handle_normal(key); },
             "delete" => { self.handle_delete(key); },
+            "insert" => { self.handle_insert(key); },
             _ => ()
         }
     }
@@ -98,8 +99,12 @@ impl Buffer {
     }
 
     pub fn move_eol(&mut self) {
+        let y = self.cursor_y;
         self.cursor_x = self.eol();
         self.col = 999999999;
+        if self.lines[y as usize].len() != 0 {
+            self.cursor_x += 1;
+        }
     }
 
     pub fn scroll_down(&mut self) {
@@ -110,11 +115,11 @@ impl Buffer {
         self.scroll_y -= 1;
     }
 
-    // private
-
-    fn eol(&self) -> i32 {
+    pub fn eol(&self) -> i32 {
         max(0, (self.lines[self.cursor_y as usize].len() as i32) - 1)
     }
+
+    // private
 
     fn rem_tabs(line: String) -> String {
         line.replace("\t", "    ")

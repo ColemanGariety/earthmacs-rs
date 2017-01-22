@@ -29,7 +29,13 @@ fn main() {
 
         loop {
             ed.draw();
-            if poll::poll_rd1(0, wait) > 0 { tk.advisereadable(); }
+            let p = poll::poll_rd1(0, wait);
+            if p == 0 {
+                match tk.getkey_force() {
+                    TermKeyResult::Key(key) => { ed.buffers[0].handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM)) }
+                    _ => {}
+                }
+            }            if p > 0 { tk.advisereadable(); }
             match tk.getkey() {
                 TermKeyResult::Key(key) => {
                     ed.buffers[0].handle_input(&tk.strfkey(key, c::TERMKEY_FORMAT_VIM));
