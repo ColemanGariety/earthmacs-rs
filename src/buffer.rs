@@ -44,9 +44,8 @@ impl Buffer {
 
     pub fn handle_input(&mut self, key: &str) {
         match self.mode.as_str() {
-            "normal" => {
-                self.handle_normal(key);
-            },
+            "normal" => { self.handle_normal(key); },
+            "delete" => { self.handle_delete(key); },
             _ => ()
         }
     }

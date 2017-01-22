@@ -16,6 +16,9 @@ impl Buffer {
             "0" => {
                 self.move_bol();
             },
+            "d" => {
+                self.mode = "delete".to_string();
+            }
             "h" => {
                 self.move_left();
             },
@@ -57,6 +60,17 @@ impl Buffer {
             "<C-s>" => {
                 self.save();
             }
+            _ => ()
+        }
+    }
+
+    pub fn handle_delete(&mut self, key: &str) {
+        match key {
+            "d" => {
+                let row = self.cursor_y;
+                self.remove_line(row as usize);
+                self.mode = "normal".to_string();
+            },
             _ => ()
         }
     }
