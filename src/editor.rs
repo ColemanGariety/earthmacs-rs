@@ -34,6 +34,10 @@ impl Editor {
             "<M-j>" => { self.focus_towards(SOUTH) },
             "<M-k>" => { self.focus_towards(NORTH) },
             "<M-l>" => { self.focus_towards(EAST) },
+            "<M-H>" => { self.split_towards(WEST); },
+            "<M-J>" => { self.split_towards(SOUTH); },
+            "<M-K>" => { self.split_towards(NORTH); },
+            "<M-L>" => { self.split_towards(EAST); },
             _ => {
                 let ref mut window = self.windows[self.focus_window_id as usize];
                 let ref mut buffer = self.buffers[window.buffer as usize];
@@ -71,10 +75,10 @@ impl Editor {
     pub fn draw(&mut self) {
         for (id, window) in self.windows.iter_mut().enumerate() {
             refresh();
-            init_pair(COLOR_PAIR_DEFAULT, 3, -1);
+            init_pair(COLOR_PAIR_DEFAULT, 5, -1);
 
             let ref buffer = self.buffers[window.buffer as usize];
-            let lines = buffer.lines.iter().skip(window.scroll_y as usize).take(window.height as usize);
+            let lines = buffer.lines.iter().skip(window.scroll_y as usize).take(window.real_height() as usize);
 
             for (index, line) in lines.enumerate() {
                 wmove(window.pane, (index + 1) as i32, 0);
@@ -82,7 +86,6 @@ impl Editor {
                 waddstr(window.pane, format!(" {}", line).as_str());
             }
 
-            // // update cursor
             wresize(window.pane, window.real_height(), window.real_width());
             mvwin(window.pane, window.real_y(), window.real_x());
             if id == self.focus_window_id as usize {
@@ -108,16 +111,30 @@ impl Editor {
         let focus_height = self.windows[self.focus_window_id as usize].height.clone();
         for (index, window) in self.windows.iter_mut().enumerate() {
             let found = match direction {
-                NORTH => window.y + window.height == focus_y,
-                SOUTH => window.y == focus_y + focus_height,
-                EAST => window.x == focus_x + focus_width,
-                WEST => window.x + window.width == focus_x,
+                NORTH => window.y + window.height == focus_y && window.x <= focus_x && window.x + window.width > focus_x,
+                SOUTH => window.y == focus_y + focus_height && window.x <= focus_x && window.x + window.width > focus_x,
+                EAST => window.x == focus_x + focus_width && window.y <= focus_y && window.y + window.height > focus_y,
+                WEST => window.x + window.width == focus_x && window.y <= focus_y && window.y + window.height > focus_y,
                 _ => false,
             };
             if found {
                 self.focus_window_id = index as i32;
             }
         }
+    }
+
+    fn split_towards(&mut self, direction: usize) {
+        match direction {
+            NORTH | SOUTH => {
+                let new_win = self.windows[self.focus_window_id as usize].split_vertically();
+                self.windows.push(new_win);
+            },
+            EAST | WEST => {
+                let new_win = self.windows[self.focus_window_id as usize].split_horizontally();
+                self.windows.push(new_win);
+            },
+            _ => ()
+        };
     }
 
     fn get_focus_window_id(&mut self) -> &mut Window {

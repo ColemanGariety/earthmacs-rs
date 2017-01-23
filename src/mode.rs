@@ -79,10 +79,6 @@ impl Window {
             },
             // "<C-q>" => { self.destroy_active_window()},
             "<C-s>" => { buffer.save(); },
-            "<M-H>" => { self.split_horizontally(); },
-            "<M-J>" => { self.split_vertically(); },
-            "<M-K>" => { self.split_vertically(); },
-            "<M-L>" => { self.split_horizontally(); },
             _ => ()
         }
     }
