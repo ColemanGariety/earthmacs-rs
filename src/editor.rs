@@ -5,8 +5,7 @@ use ncurses::*;
 
 use buffer::Buffer;
 use window::Window;
-
-static COLOR_PAIR_DEFAULT: i16 = 1;
+use window_tree::WindowTree;
 
 const NORTH: usize = 1;
 const SOUTH: usize = 2;
@@ -15,38 +14,36 @@ const WEST: usize = 4;
 
 pub struct Editor {
     pub buffers: Vec<Buffer>,
-    pub windows: Vec<Window>,
-    pub focus_window_id: i32,
+    pub window_tree: WindowTree,
 }
 
 impl Editor {
     pub fn new() -> Editor {
         Editor {
             buffers: vec![],
-            windows: vec![],
-            focus_window_id: 0,
+            window_tree: WindowTree::new(None),
         }
     }
 
     pub fn handle_input(&mut self, key: &str) {
         match key {
-            "<M-h>" => { self.focus_towards(WEST) },
-            "<M-j>" => { self.focus_towards(SOUTH) },
-            "<M-k>" => { self.focus_towards(NORTH) },
-            "<M-l>" => { self.focus_towards(EAST) },
+            "<M-h>" => { self.window_tree.focus(WEST) },
+            "<M-j>" => { self.window_tree.focus(SOUTH) },
+            "<M-k>" => { self.window_tree.focus(NORTH) },
+            "<M-l>" => { self.window_tree.focus(EAST) },
             "<M-H>" => { self.split_towards(WEST); },
             "<M-J>" => { self.split_towards(SOUTH); },
             "<M-K>" => { self.split_towards(NORTH); },
             "<M-L>" => { self.split_towards(EAST); },
+            "<C-q>" => { self.window_tree.find_active_window_tree().unwrap().destroy() },
             _ => {
-                let ref mut window = self.windows[self.focus_window_id as usize];
-                let ref mut buffer = self.buffers[window.buffer as usize];
-                match window.mode.as_str() {
-                    "normal" => { window.handle_normal(key, buffer); },
-                    "delete" => { window.handle_delete(key, buffer); },
-                    "insert" => { window.handle_insert(key, buffer); },
-                    "find_char" => { window.handle_find_char(key, buffer); },
-                    "replace" => { window.handle_replace(key, buffer); },
+                let ref mode = self.window_tree.find_active_window().unwrap().mode.clone();
+                match mode.as_str() {
+                    "normal" => { self.handle_normal(key); },
+                    "delete" => { self.handle_delete(key); },
+                    "insert" => { self.handle_insert(key); },
+                    "find_char" => { self.handle_find_char(key); },
+                    "replace" => { self.handle_replace(key); },
                     _ => ()
                 }
             }
@@ -62,82 +59,35 @@ impl Editor {
                 for line in reader.lines() {
                     buf.append_line(line.unwrap());
                 }
-                self.windows.push(Window::new(0, 0, 100, 100));
+                self.window_tree = WindowTree::new(None);
+                self.window_tree.leaf = Window::new();
                 self.buffers.push(buf);
             },
             Err(_) => ()
         }
 
-        let new_win = self.windows[0].split_horizontally();
-        self.windows.push(new_win);
+        self.window_tree.split_horizontally();
     }
 
     pub fn draw(&mut self) {
-        for (id, window) in self.windows.iter_mut().enumerate() {
-            refresh();
-            init_pair(COLOR_PAIR_DEFAULT, 5, -1);
-
-            let ref buffer = self.buffers[window.buffer as usize];
-            let lines = buffer.lines.iter().skip(window.scroll_y as usize).take(window.real_height() as usize);
-
-            for (index, line) in lines.enumerate() {
-                wmove(window.pane, (index + 1) as i32, 0);
-                wclrtoeol(window.pane);
-                waddstr(window.pane, format!(" {}", line).as_str());
-            }
-
-            wresize(window.pane, window.real_height(), window.real_width());
-            mvwin(window.pane, window.real_y(), window.real_x());
-            if id == self.focus_window_id as usize {
-                wattron(window.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
-            }
-            box_(window.pane, 0, 0);
-            wattroff(window.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
-            wrefresh(window.pane);
-        }
-
-        for (id, window) in self.windows.iter().enumerate() {
-            if id == self.focus_window_id as usize {
-                wmove(window.pane, (window.cursor_y - window.scroll_y) + 1, window.cursor_x + 1);
-                wrefresh(window.pane);
-            }
-        }
-    }
-
-    fn focus_towards(&mut self, direction: usize) {
-        let focus_x = self.windows[self.focus_window_id as usize].x.clone();
-        let focus_y = self.windows[self.focus_window_id as usize].y.clone();
-        let focus_width = self.windows[self.focus_window_id as usize].width.clone();
-        let focus_height = self.windows[self.focus_window_id as usize].height.clone();
-        for (index, window) in self.windows.iter_mut().enumerate() {
-            let found = match direction {
-                NORTH => window.y + window.height == focus_y && window.x <= focus_x && window.x + window.width > focus_x,
-                SOUTH => window.y == focus_y + focus_height && window.x <= focus_x && window.x + window.width > focus_x,
-                EAST => window.x == focus_x + focus_width && window.y <= focus_y && window.y + window.height > focus_y,
-                WEST => window.x + window.width == focus_x && window.y <= focus_y && window.y + window.height > focus_y,
-                _ => false,
-            };
-            if found {
-                self.focus_window_id = index as i32;
-            }
-        }
+        let mut max_y = 0;
+        let mut max_x = 0;
+        getmaxyx(stdscr(), &mut max_y, &mut max_x);
+        self.window_tree.draw(&self.buffers, max_x, max_y, 0, 0);
+        let ref active = self.window_tree.find_active_window().unwrap();
+        wmove(active.pane, active.cursor_y + 1, active.cursor_x + 1);
+        wrefresh(active.pane);
     }
 
     fn split_towards(&mut self, direction: usize) {
         match direction {
             NORTH | SOUTH => {
-                let new_win = self.windows[self.focus_window_id as usize].split_vertically();
-                self.windows.push(new_win);
+                // self.window_tree.find_active_window().split_vertically();
             },
             EAST | WEST => {
-                let new_win = self.windows[self.focus_window_id as usize].split_horizontally();
-                self.windows.push(new_win);
+                self.window_tree.find_active_window_tree().unwrap().split_horizontally();
             },
             _ => ()
         };
-    }
-
-    fn get_focus_window_id(&mut self) -> &mut Window {
-        &mut self.windows[self.focus_window_id as usize]
     }
 }

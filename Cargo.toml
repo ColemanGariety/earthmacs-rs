@@ -6,4 +6,4 @@ authors = ["clmn"]
 [dependencies]
 ncurses = "5.85.0"
 termkey-rs = { git = "git://github.com/mathall/termkey-rs.git" }
-libc = "*"
+libc = "0.2.20"

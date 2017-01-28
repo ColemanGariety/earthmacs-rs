@@ -1,168 +1,186 @@
 use std::cmp::{min, max};
 use std;
+use editor::Editor;
 use window::Window;
 use buffer::Buffer;
 use ncurses::*;
 
-impl Window {
-    pub fn handle_normal(&mut self, key: &str, buffer: &mut Buffer) {
+impl Editor {
+    pub fn handle_normal(&mut self, key: &str) {
+        let ref mut window_tree = self.window_tree;
+        let ref mut window = window_tree.find_active_window().unwrap();
+        let ref mut buffer = self.buffers[window.buffer_index as usize];
+
         match key {
             "$" => {
-                self.cursor_x = buffer.eol(self.cursor_y);
-                self.col = 99999999;
+                window.cursor_x = buffer.eol(window.cursor_y);
+                window.col = 99999999;
             },
-            "0" => { self.move_bol(); },
+            "0" => { window.move_bol(); },
             "A" => {
-                self.mode = "insert".to_string();
-                while self.cursor_x < buffer.lines[self.cursor_y as usize].len() as i32 {
-                    self.move_right();
+                window.mode = "insert".to_string();
+                while window.cursor_x < buffer.lines[window.cursor_y as usize].len() as i32 {
+                    window.move_right();
                 }
             },
-            "d" => { self.mode = "delete".to_string(); },
-            "f" => { self.mode = "find_char".to_string(); },
+            "d" => { window.mode = "delete".to_string(); },
+            "f" => { window.mode = "find_char".to_string(); },
             "G" => {
-                while self.scroll_y < buffer.lines.len() as i32 { // 
-                    self.move_down();
+                while window.scroll_y < buffer.lines.len() as i32 { // 
+                    window.move_down();
                 }
             }
             "h" => {
-                if self.cursor_x > 0 {
-                    self.move_left();
+                if window.cursor_x > 0 {
+                    window.move_left();
                 }
             },
-            "i" => { self.mode = "insert".to_string(); }
+            "i" => { window.mode = "insert".to_string(); }
             "j" => {
-                if self.cursor_y < (buffer.eof() - 1) {
-                    self.move_down();
-                    self.cursor_x  = min(buffer.eol(self.cursor_y), self.col);
+                if window.cursor_y < (buffer.eof() - 1) {
+                    window.move_down();
+                    window.cursor_x  = min(buffer.eol(window.cursor_y), window.col);
                 }
             },
             "k" => {
-                if self.cursor_y > 0 {
-                    self.move_up();
-                    self.cursor_x  = min(buffer.eol(self.cursor_y), self.col);
+                if window.cursor_y > 0 {
+                    window.move_up();
+                    window.cursor_x  = min(buffer.eol(window.cursor_y), window.col);
                 }
             },
             "l" => {
-                if self.cursor_x < buffer.eol(self.cursor_y) {
-                    self.move_right();
+                if window.cursor_x < buffer.eol(window.cursor_y) {
+                    window.move_right();
                 }
             },
-            "r" => { self.mode = "replace".to_string() },
+            "r" => { window.mode = "replace".to_string() },
             "x" => {
-                let x = self.cursor_x;
-                let y = self.cursor_y;
+                let x = window.cursor_x;
+                let y = window.cursor_y;
                 buffer.remove(x, y);
                 if x == buffer.eol(y) + 1 {
-                    self.move_left();
+                    window.move_left();
                 }
             }
             "<C-b>" => {
-                for _ in 1..(self.real_height() - 2) {
-                    self.move_up();
-                    if self.cursor_y < self.scroll_y {
-                        self.scroll_up();
-                    }
-                }
+                // for _ in 1..(window_tree.window_height(window) - 2) {
+                //     window.move_up();
+                //     if window.cursor_y < window.scroll_y {
+                //         window.scroll_up();
+                //     }
+                // }
             },
             "<C-c>" => { endwin(); std::process::exit(0); },
             "<C-f>" => {
-                for _ in 1..((self.real_height()) - 2) {
-                    if self.cursor_y < (buffer.eof() - 1) {
-                        self.move_down();
-                        self.cursor_x  = min(buffer.eol(self.cursor_y), self.col);
-                        if self.cursor_y >= (self.scroll_y + self.height - 2) {
-                            self.scroll_down();
-                        }
-                    }
-                }
+                // for _ in 1..((window_tree.window_height(window)) - 2) {
+                //     if window.cursor_y < (buffer.eof() - 1) {
+                //         window.move_down();
+                //         window.cursor_x  = min(buffer.eol(window.cursor_y), window.col);
+                //     }
+                // }
             },
-            // "<C-q>" => { self.destroy_active_window()},
+            // "<C-q>" => { window.destroy_active_window()},
             "<C-s>" => { buffer.save(); },
             _ => ()
         }
     }
 
-    pub fn handle_delete(&mut self, key: &str, buffer: &mut Buffer) {
+    pub fn handle_delete(&mut self, key: &str) {
+        let ref mut window_tree = self.window_tree;
+        let ref mut window = window_tree.find_active_window().unwrap();
+        let ref mut buffer = self.buffers[window.buffer_index as usize];
+
         match key {
             "<Escape>" => {
-                self.mode = "normal".to_string();
-                self.move_left();
+                window.mode = "normal".to_string();
+                window.move_left();
             },
             "d" => {
-                let row = self.cursor_y;
+                let row = window.cursor_y;
                 buffer.remove_line(row as usize);
-                self.mode = "normal".to_string();
+                window.mode = "normal".to_string();
             },
             _ => ()
         }
     }
 
-    pub fn handle_insert(&mut self, key: &str, buffer: &mut Buffer) {
+    pub fn handle_insert(&mut self, key: &str) {
+        let ref mut window_tree = self.window_tree;
+        let ref mut window = window_tree.find_active_window().unwrap();
+        let ref mut buffer = self.buffers[window.buffer_index as usize];
+
         match key {
             "<Escape>" => {
-                self.mode = "normal".to_string();
-                self.move_left();
+                window.mode = "normal".to_string();
+                window.move_left();
             },
             "<DEL>" => {
-                let x = self.cursor_x.clone();
-                let y = self.cursor_y.clone();
+                let x = window.cursor_x.clone();
+                let y = window.cursor_y.clone();
                 if x == 0 {
-                    self.move_up();
-                    while self.cursor_x < buffer.lines[self.cursor_y as usize].len() as i32 {
-                        self.move_right();
+                    window.move_up();
+                    while window.cursor_x < buffer.lines[window.cursor_y as usize].len() as i32 {
+                        window.move_right();
                     }
                 } else {
-                    self.move_left();
+                    window.move_left();
                 }
                 buffer.remove(x - 1, y);
             },
             "<Enter>" => {
-                buffer.insert_newline(self.cursor_x, self.cursor_y);
-                self.move_down();
-                self.move_bol();
+                buffer.insert_newline(window.cursor_x, window.cursor_y);
+                window.move_down();
+                window.move_bol();
             },
             _ => {
-                buffer.insert(key, self.cursor_x, self.cursor_y);
-                self.cursor_x += 1;
-                self.col += 1;
+                buffer.insert(key, window.cursor_x, window.cursor_y);
+                window.cursor_x += 1;
+                window.col += 1;
             }
         }
     }
 
-    pub fn handle_find_char(&mut self, key: &str, buffer: &mut Buffer) {
+    pub fn handle_find_char(&mut self, key: &str) {
+        let ref mut window_tree = self.window_tree;
+        let ref mut window = window_tree.find_active_window().unwrap();
+        let ref mut buffer = self.buffers[window.buffer_index as usize];
+
         match key {
             "<Escape>" => {
-                self.mode = "normal".to_string();
-                self.move_left();
+                window.mode = "normal".to_string();
+                window.move_left();
             },
             _ => {
-                let y = self.cursor_y as usize;
-                let x = self.cursor_x as usize;
+                let y = window.cursor_y as usize;
+                let x = window.cursor_x as usize;
                 match buffer.lines[y].chars().skip(x + 1).position(|c| char::to_string(&c).as_str() == key) {
                     Some(i) => {
-                        self.cursor_x += (i + 1) as i32;
-                        self.col += (i + 1) as i32;
+                        window.cursor_x += (i + 1) as i32;
+                        window.col += (i + 1) as i32;
                     },
                     _ => ()
                 }
-                self.mode = "normal".to_string();
+                window.mode = "normal".to_string();
             }
         }
     }
 
-    pub fn handle_replace(&mut self, key: &str, buffer: &mut Buffer) {
+    pub fn handle_replace(&mut self, key: &str) {
+        let ref mut window_tree = self.window_tree;
+        let ref mut window = window_tree.find_active_window().unwrap();
+        let ref mut buffer = self.buffers[window.buffer_index as usize];
+
         match key {
             "<Escape>" => {
-                self.mode = "normal".to_string();
-                self.move_left();
+                window.mode = "normal".to_string();
+                window.move_left();
             },
             _ => {
-                let x = self.cursor_x;
-                let y = self.cursor_y;
+                let x = window.cursor_x;
+                let y = window.cursor_y;
                 buffer.remove(x, y);
                 buffer.insert(key, x, y);
-                self.mode = "normal".to_string();
+                window.mode = "normal".to_string();
             },
         }
     }
