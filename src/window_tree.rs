@@ -142,17 +142,24 @@ impl WindowTree {
     }
 
     pub fn find_leaf(&mut self) -> Option<&mut Window> {
+        let len = self.branches.len();
         if self.branches.len() > 0 {
-            for branch in &mut self.branches {
-                match branch.find_leaf() {
-                    Some(leaf) => { return Some(leaf) },
-                    None => ()
-                }
+            match self.branches[len - 1].find_leaf() {
+                Some(leaf) => { return Some(leaf) },
+                None => ()
             }
         } else {
             return Some(&mut self.leaf)
         }
         None
+    }
+
+    pub fn reparent_branches(&mut self) {
+        let parent = self as *mut WindowTree;
+        for branch in &mut self.branches {
+            branch.parent = Some(parent);
+            branch.reparent_branches();
+        }
     }
 
     pub fn destroy(&mut self) {
@@ -164,19 +171,36 @@ impl WindowTree {
                         if branch.leaf.active == false {
                             if branch.branches.len() > 0 {
                                 (*self.parent.unwrap()).branches = branch.branches.clone();
-                                for branch in &mut (*self.parent.unwrap()).branches {
-                                    branch.parent = self.parent;
-                                }
                             } else {
                                 (*self.parent.unwrap()).leaf = branch.leaf.clone();
                                 (*self.parent.unwrap()).branches = vec![];
                             }
                         }
                     }
+                    (*self.parent.unwrap()).reparent_branches();
                     (*self.parent.unwrap()).find_leaf().unwrap().active = true;
                 },
                 None => ()
             }
         }
+    }
+
+    pub fn active_window_height(&mut self, width: i32, height: i32) -> Option<i32> {
+        if self.leaf.active {
+            return Some(height);
+        } else {
+            let mut extra_width = 0;
+            let n = self.branches.len() as i32;
+            for (i, branch) in &mut self.branches.iter_mut().enumerate() {
+                if i == (n - 1) as usize { extra_width = width % n; }
+                match branch.active_window_height((width / n) + extra_width, height) {
+                    Some(height) => {
+                        return Some(height);
+                    },
+                    None => ()
+                };
+            }
+        }
+        None
     }
 }

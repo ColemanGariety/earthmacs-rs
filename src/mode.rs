@@ -7,8 +7,11 @@ use ncurses::*;
 
 impl Editor {
     pub fn handle_normal(&mut self, key: &str) {
-        let ref mut window_tree = self.window_tree;
-        let ref mut window = window_tree.find_active_window().unwrap();
+        let mut max_x = 0;
+        let mut max_y = 0;
+        getmaxyx(stdscr(), &mut max_y, &mut max_x);
+        let window_height = self.window_tree.active_window_height(max_x, max_y).unwrap();
+        let window = self.window_tree.find_active_window().unwrap();
         let ref mut buffer = self.buffers[window.buffer_index as usize];
 
         match key {
@@ -39,8 +42,12 @@ impl Editor {
             "j" => {
                 if window.cursor_y < (buffer.eof() - 1) {
                     window.move_down();
+                    if window.cursor_y >= (window.scroll_y + window_height) - 2 {
+                        window.scroll_down()
+                    }
                     window.cursor_x  = min(buffer.eol(window.cursor_y), window.col);
                 }
+
             },
             "k" => {
                 if window.cursor_y > 0 {
@@ -63,21 +70,24 @@ impl Editor {
                 }
             }
             "<C-b>" => {
-                // for _ in 1..(window_tree.window_height(window) - 2) {
-                //     window.move_up();
-                //     if window.cursor_y < window.scroll_y {
-                //         window.scroll_up();
-                //     }
-                // }
+                for _ in 1..(window_height - 2) {
+                    window.move_up();
+                    if window.cursor_y < window.scroll_y {
+                        window.scroll_up();
+                    }
+                }
             },
             "<C-c>" => { endwin(); std::process::exit(0); },
             "<C-f>" => {
-                // for _ in 1..((window_tree.window_height(window)) - 2) {
-                //     if window.cursor_y < (buffer.eof() - 1) {
-                //         window.move_down();
-                //         window.cursor_x  = min(buffer.eol(window.cursor_y), window.col);
-                //     }
-                // }
+                for _ in 1..(window_height - 2) {
+                    if window.cursor_y < (buffer.eof() - 1) {
+                        window.move_down();
+                        window.cursor_x  = min(buffer.eol(window.cursor_y), window.col);
+                        if window.cursor_y >= (window.scroll_y + window_height - 2) {
+                            window.scroll_down();
+                        }
+                    }
+                }
             },
             // "<C-q>" => { window.destroy_active_window()},
             "<C-s>" => { buffer.save(); },

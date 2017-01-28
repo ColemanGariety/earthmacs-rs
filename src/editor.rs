@@ -75,7 +75,7 @@ impl Editor {
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
         self.window_tree.draw(&self.buffers, max_x, max_y, 0, 0);
         let ref active = self.window_tree.find_active_window().unwrap();
-        wmove(active.pane, active.cursor_y + 1, active.cursor_x + 1);
+        wmove(active.pane, active.cursor_y - active.scroll_y + 1, active.cursor_x + 1);
         wrefresh(active.pane);
     }
 
@@ -90,4 +90,5 @@ impl Editor {
             _ => ()
         };
     }
+
 }
