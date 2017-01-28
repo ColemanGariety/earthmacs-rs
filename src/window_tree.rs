@@ -1,3 +1,4 @@
+use std;
 use buffer::Buffer;
 use editor::Editor;
 use window::Window;
@@ -159,14 +160,20 @@ impl WindowTree {
             match self.parent {
                 Some(tree) => {
                     let ref mut parent = *tree;
-                    for branch in &mut parent.branches {
+                    for branch in &parent.branches {
                         if branch.leaf.active == false {
-                            if branch.branches.len() > 0 {(*self.parent.unwrap()).branches = branch.branches.clone();}
-                            else {(*self.parent.unwrap()).branches = vec![];}
-                            (*self.parent.unwrap()).leaf = branch.leaf.clone();
-                            (*self.parent.unwrap()).find_leaf().unwrap().active = true;
+                            if branch.branches.len() > 0 {
+                                (*self.parent.unwrap()).branches = branch.branches.clone();
+                                for branch in &mut (*self.parent.unwrap()).branches {
+                                    branch.parent = self.parent;
+                                }
+                            } else {
+                                (*self.parent.unwrap()).leaf = branch.leaf.clone();
+                                (*self.parent.unwrap()).branches = vec![];
+                            }
                         }
                     }
+                    (*self.parent.unwrap()).find_leaf().unwrap().active = true;
                 },
                 None => ()
             }
