@@ -1,3 +1,4 @@
+extern crate syntect;
 extern crate ncurses;
 extern crate termkey;
 extern crate libc;

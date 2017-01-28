@@ -3,23 +3,35 @@ use std::fs::File;
 use std::io::Write;
 use window::Window;
 
+use std::path::Path;
+use syntect::parsing::syntax_definition::SyntaxDefinition;
+use syntect::parsing::SyntaxSet;
+
 pub struct Buffer {
     pub lines: Vec<String>,
     pub path: String,
+    pub syntax: SyntaxDefinition,
 }
 
 impl Buffer {
     pub fn new(path: String) -> Buffer {
+        let mut ps = SyntaxSet::load_defaults_nonewlines();
+        ps.link_syntaxes();
+        let p = &path.clone();
+        let ext = Path::new(p).extension().unwrap().to_str().unwrap();
         Buffer {
             lines: vec![],
             path: path,
+            syntax: ps.find_syntax_by_extension(ext).unwrap().clone()
         }
     }
 
     pub fn save(&self) {
         match File::create(&self.path) {
             Ok(mut f) => {
-                match f.write_all(self.lines.join("\n").as_bytes()) {
+                let mut lns = self.lines.join("\n");
+                lns.push('\n');
+                match f.write_all(lns.as_bytes()) {
                     Ok(_) => (),
                     Err(e) => panic!(e)
                 };

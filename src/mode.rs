@@ -10,7 +10,8 @@ impl Editor {
         let mut max_x = 0;
         let mut max_y = 0;
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
-        let window_height = self.window_tree.active_window_height(max_x, max_y).unwrap();
+        // let window_height = self.window_tree.active_window_height(max_x, max_y).unwrap();
+        let window_height = max_y;
         let window = self.window_tree.find_active_window().unwrap();
         let ref mut buffer = self.buffers[window.buffer_index as usize];
 

@@ -17,6 +17,7 @@ pub struct Editor {
     pub window_tree: WindowTree,
 }
 
+
 impl Editor {
     pub fn new() -> Editor {
         Editor {
@@ -61,12 +62,11 @@ impl Editor {
                 }
                 self.window_tree = WindowTree::new(None);
                 self.window_tree.leaf = Window::new();
+                self.window_tree.leaf.active = true;
                 self.buffers.push(buf);
             },
             Err(_) => ()
         }
-
-        self.window_tree.split_horizontally();
     }
 
     pub fn draw(&mut self) {
@@ -74,9 +74,11 @@ impl Editor {
         let mut max_x = 0;
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
         self.window_tree.draw(&self.buffers, max_x, max_y, 0, 0);
+        doupdate();
         let ref active = self.window_tree.find_active_window().unwrap();
         wmove(active.pane, active.cursor_y - active.scroll_y + 1, active.cursor_x + 1);
-        wrefresh(active.pane);
+        wnoutrefresh(active.pane);
+        doupdate();
     }
 
     fn split_towards(&mut self, direction: usize) {

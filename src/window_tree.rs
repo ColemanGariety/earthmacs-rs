@@ -105,7 +105,6 @@ impl WindowTree {
                 branch.draw(buffers, (width / n) + extra_width, height, x + ((width / n) * (i as i32)), y);
             }
         } else {
-            refresh();
             init_pair(COLOR_PAIR_DEFAULT, 3, -1);
 
             let ref buffer = buffers[self.leaf.buffer_index as usize];
@@ -124,7 +123,7 @@ impl WindowTree {
             }
             box_(self.leaf.pane, 0, 0);
             wattroff(self.leaf.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
-            wrefresh(self.leaf.pane);
+            wnoutrefresh(self.leaf.pane);
         }
     }
 
