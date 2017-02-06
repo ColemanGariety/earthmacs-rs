@@ -164,7 +164,7 @@ impl Editor {
             _ => {
                 let y = window.cursor_y as usize;
                 let x = window.cursor_x as usize;
-                match buffer.lines[y].chars().skip(x + 1).position(|c| char::to_string(&c).as_str() == key) {
+                match buffer.lines[y].iter().skip(x + 1).position(|c| char::to_string(&c).as_str() == key) {
                     Some(i) => {
                         window.cursor_x += (i + 1) as i32;
                         window.col += (i + 1) as i32;

@@ -113,7 +113,10 @@ impl WindowTree {
             for (index, line) in lines.enumerate() {
                 wmove(self.leaf.pane, (index + 1) as i32, 0);
                 wclrtoeol(self.leaf.pane);
-                waddstr(self.leaf.pane, format!(" {}", line).as_str());
+                waddstr(self.leaf.pane, " ");
+                for ch in line {
+                    waddstr(self.leaf.pane, format!("{}", ch).as_str());
+                }
             }
 
             wresize(self.leaf.pane, height, width);

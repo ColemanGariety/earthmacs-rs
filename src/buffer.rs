@@ -8,7 +8,7 @@ use syntect::parsing::syntax_definition::SyntaxDefinition;
 use syntect::parsing::SyntaxSet;
 
 pub struct Buffer {
-    pub lines: Vec<String>,
+    pub lines: Vec<Vec<char>>,
     pub path: String,
     pub syntax: SyntaxDefinition,
 }
@@ -27,45 +27,54 @@ impl Buffer {
     }
 
     pub fn save(&self) {
-        match File::create(&self.path) {
-            Ok(mut f) => {
-                let mut lns = self.lines.join("\n");
-                lns.push('\n');
-                match f.write_all(lns.as_bytes()) {
-                    Ok(_) => (),
-                    Err(e) => panic!(e)
-                };
-            },
-            Err(_) => ()
-        }
+        // match File::create(&self.path) {
+        //     Ok(mut f) => {
+        //         let mut lns = self.lines.join("\n");
+        //         lns.push('\n');
+        //         match f.write_all(lns) {
+        //             Ok(_) => (),
+        //             Err(e) => panic!(e)
+        //         };
+        //     },
+        //     Err(_) => ()
+        // }
     }
 
     pub fn remove(&mut self, x: i32, y: i32) {
-        let line = self.lines[y as usize].clone();
+        let mut line = self.lines[y as usize].clone();
         if x == -1 || line.len() == 0 {
-            self.lines[(y - 1) as usize] += line.as_str();
+            self.lines[(y - 1) as usize].append(&mut line);
             self.remove_line(y as usize);
         } else {
-            let (a, b) = line.split_at(x as usize);
-            self.lines[y as usize] = a.to_string() + &(b.to_string())[1..];
+            let (a, mut b) = line.split_at(x as usize);
+            let mut new = a.to_vec();
+            new.append(&mut b.to_vec());
+            self.lines[y as usize] = new;
         }
     }
 
     pub fn insert(&mut self, c: &str, x: i32, y: i32) {
         let line = self.lines[y as usize].clone();
-        let (a, b) = line.split_at(x as usize);
-        self.lines[y as usize] = format!("{}{}{}", a, c, b);
+        let (mut a, mut b) = line.split_at(x as usize);
+        let mut new = a.to_owned();
+        new.append(&mut c.to_string().chars().collect());
+        new.append(&mut b.to_vec());
+        self.lines[y as usize] = new;
     }
 
     pub fn insert_newline(&mut self, x: i32, y: i32) {
         let line = self.lines[y as usize].clone();
         let (a, b) = line.split_at(x as usize);
-        self.lines[y as usize] = a.to_string();
-        self.lines.insert((y + 1) as usize, b.to_string());
+        self.lines[y as usize] = a.to_vec();
+        self.lines.insert((y + 1) as usize, b.to_vec());
     }
 
     pub fn append_line(&mut self, line: String) {
-        self.lines.push(Buffer::rem_tabs(line));
+        let mut ln = vec![];
+        for ch in line.chars() {
+                ln.push(ch);
+        }
+        self.lines.push(ln);
     }
 
     pub fn remove_line(&mut self, index: usize) {
