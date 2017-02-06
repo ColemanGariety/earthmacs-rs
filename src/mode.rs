@@ -125,7 +125,7 @@ impl Editor {
                 window.mode = "normal".to_string();
                 window.move_left();
             },
-            "<DEL>" => {
+            "<DEL>" | "<Backspace>" => {
                 let x = window.cursor_x.clone();
                 let y = window.cursor_y.clone();
                 if x == 0 {

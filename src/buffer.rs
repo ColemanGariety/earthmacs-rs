@@ -1,29 +1,27 @@
+use std::path::Path;
+use syntect;
+use syntect::easy::HighlightLines;
 use std::cmp::{min, max};
 use std::fs::File;
 use std::io::Write;
 use cell::Cell;
 use window::Window;
-
-use std::path::Path;
-use syntect::parsing::syntax_definition::SyntaxDefinition;
-use syntect::parsing::SyntaxSet;
+use util;
 
 pub struct Buffer {
     pub lines: Vec<Vec<Cell>>,
     pub path: String,
-    pub syntax: SyntaxDefinition,
+    pub highlighter: syntect::parsing::SyntaxDefinition,
+    pub ts: syntect::highlighting::ThemeSet,
 }
 
 impl Buffer {
-    pub fn new(path: String) -> Buffer {
-        let mut ps = SyntaxSet::load_defaults_nonewlines();
-        ps.link_syntaxes();
-        let p = &path.clone();
-        let ext = Path::new(p).extension().unwrap().to_str().unwrap();
+    pub fn new(path: String, highlighter: syntect::parsing::SyntaxDefinition, ts: syntect::highlighting::ThemeSet) -> Buffer {
         Buffer {
             lines: vec![],
             path: path,
-            syntax: ps.find_syntax_by_extension(ext).unwrap().clone()
+            highlighter: highlighter,
+            ts: ts,
         }
     }
 
@@ -49,18 +47,34 @@ impl Buffer {
         } else {
             let (a, mut b) = line.split_at(x as usize);
             let mut new = a.to_vec();
-            new.append(&mut b.to_vec());
+            new.append(&mut (&b[1..]).to_vec());
             self.lines[y as usize] = new;
         }
     }
 
     pub fn insert(&mut self, c: &str, x: i32, y: i32) {
-        let line = self.lines[y as usize].clone();
-        let (mut a, mut b) = line.split_at(x as usize);
-        let mut new = a.to_owned();
-        // new.append(&mut c.to_string().chars());
-        new.append(&mut b.to_vec());
-        self.lines[y as usize] = new;
+        let mut line = self.lines[y as usize].clone();
+        let mut h = HighlightLines::new(&self.highlighter, &self.ts.themes["base16-ocean.dark"]);
+        let mut new = vec![];
+        if line.len() == 0 {
+            line.append(&mut c.chars().map(|ch| Cell::new(ch, 1)).collect());
+            new = line;
+        } else {
+            let (mut a, mut b) = line.split_at(x as usize);
+            new.append(&mut a.to_vec());
+            new.append(&mut c.chars().map(|ch| Cell::new(ch, 1)).collect());
+            new.append(&mut b.to_vec());
+        }
+
+        let line_string: String = new.iter().cloned().map(|c| c.ch).collect();
+        self.lines[y as usize] = vec![];
+        let ranges = h.highlight(line_string.as_str());
+        for (style, text) in ranges {
+            let color = util::rgb_to_short(format!("{0:02.x}{1:02.x}{2:02.x}", style.foreground.r, style.foreground.g, style.foreground.b).as_str());
+            for ch in text.chars() {
+                self.lines[y as usize].push(Cell::new(ch, color as i32));
+            }
+        }
     }
 
     pub fn insert_newline(&mut self, x: i32, y: i32) {

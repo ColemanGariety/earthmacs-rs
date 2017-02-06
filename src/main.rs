@@ -21,6 +21,7 @@ mod poll;
 mod window;
 mod window_tree;
 mod cell;
+mod util;
 
 fn main() {
     initscr();
@@ -30,7 +31,7 @@ fn main() {
     start_color();
     use_default_colors();
 
-    for i in 1..256 {
+    for i in 0..255 {
         init_pair(i, i, -1);
     }
 
