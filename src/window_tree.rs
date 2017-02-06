@@ -3,6 +3,8 @@ use buffer::Buffer;
 use editor::Editor;
 use window::Window;
 use ncurses::*;
+use ansi_term;
+use regex::Regex;
 
 static COLOR_PAIR_DEFAULT: i16 = 1;
 
@@ -105,8 +107,6 @@ impl WindowTree {
                 branch.draw(buffers, (width / n) + extra_width, height, x + ((width / n) * (i as i32)), y);
             }
         } else {
-            init_pair(COLOR_PAIR_DEFAULT, 3, -1);
-
             let ref buffer = buffers[self.leaf.buffer_index as usize];
             let lines = buffer.lines.iter().skip(self.leaf.scroll_y as usize).take(height as usize);
 
@@ -115,7 +115,9 @@ impl WindowTree {
                 wclrtoeol(self.leaf.pane);
                 waddstr(self.leaf.pane, " ");
                 for ch in line {
-                    waddstr(self.leaf.pane, format!("{}", ch).as_str());
+                    wattron(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
+                    waddstr(self.leaf.pane, ch.ch.to_string().as_str());
+                    wattroff(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
                 }
             }
 

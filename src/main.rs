@@ -2,6 +2,12 @@ extern crate syntect;
 extern crate ncurses;
 extern crate termkey;
 extern crate libc;
+extern crate ansi_term;
+extern crate regex;
+#[macro_use]
+extern crate lazy_static;
+
+static COLOR_PAIR_DEFAULT: i16 = 1;
 
 use std::{env};
 use ncurses::*;
@@ -14,6 +20,7 @@ mod buffer;
 mod poll;
 mod window;
 mod window_tree;
+mod cell;
 
 fn main() {
     initscr();
@@ -22,6 +29,12 @@ fn main() {
     keypad(stdscr(), true);
     start_color();
     use_default_colors();
+
+    for i in 1..256 {
+        init_pair(i, i, -1);
+    }
+
+    init_pair(COLOR_PAIR_DEFAULT, 3, -1);
 
     let ed = &mut Editor::new();
 

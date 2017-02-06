@@ -1,6 +1,7 @@
 use std::cmp::{min, max};
 use std::fs::File;
 use std::io::Write;
+use cell::Cell;
 use window::Window;
 
 use std::path::Path;
@@ -8,7 +9,7 @@ use syntect::parsing::syntax_definition::SyntaxDefinition;
 use syntect::parsing::SyntaxSet;
 
 pub struct Buffer {
-    pub lines: Vec<Vec<char>>,
+    pub lines: Vec<Vec<Cell>>,
     pub path: String,
     pub syntax: SyntaxDefinition,
 }
@@ -57,7 +58,7 @@ impl Buffer {
         let line = self.lines[y as usize].clone();
         let (mut a, mut b) = line.split_at(x as usize);
         let mut new = a.to_owned();
-        new.append(&mut c.to_string().chars().collect());
+        // new.append(&mut c.to_string().chars());
         new.append(&mut b.to_vec());
         self.lines[y as usize] = new;
     }
@@ -72,7 +73,7 @@ impl Buffer {
     pub fn append_line(&mut self, line: String) {
         let mut ln = vec![];
         for ch in line.chars() {
-                ln.push(ch);
+            ln.push(Cell::new(ch, 0));
         }
         self.lines.push(ln);
     }
