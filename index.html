@@ -16,22 +16,43 @@
 
      body {
          font-family: Merriweather Sans;
-         color:  #1f2a2e;
+         color:  #eff2f1;
      }
 
      header, main, footer {
          width: 600px;
          margin: 0 auto;
      }
+
+     header {
+         text-align: center;
+     }
+
+     h1 iframe {
+         position: relative;
+         top: 4px;
+     }
+
+     #earthmacs {
+         width: 100%;
+         box-shadow: 3px 3px 6px rgba(0,0,0,.4);
+     }
     </style>
   </head>
   <body>
     <header>
-      <h1>Earthmacs</h1>
+      <h1>Earthmacs
+      <iframe src="https://ghbtns.com/github-btn.html?user=JacksonGariety&repo=earthmacs&type=star&count=true&size=large" frameborder="0" scrolling="0" width="160px" height="30px"></iframe>
+      </h1>
+
+      <p>Earthmacs is text editor with a powerful built-in macro system.</p>
     </header>
     <main>
-      <p>Earthmacs is text editor with a powerful built-in macro system.</p>
-      <img src="earthmacs.png" />
+      <center>
+        <img src="earthmacs.png" id="earthmacs" />
+        <br/>
+        <br/>
+      </center>
     </main>
   </body>
 </html>
