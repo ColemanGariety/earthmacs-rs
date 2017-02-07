@@ -6,17 +6,18 @@ use std::fs::File;
 use std::io::Write;
 use cell::Cell;
 use window::Window;
+use std::path::PathBuf;
 use util;
 
 pub struct Buffer {
     pub lines: Vec<Vec<Cell>>,
-    pub path: String,
+    pub path: PathBuf,
     pub highlighter: syntect::parsing::SyntaxDefinition,
     pub ts: syntect::highlighting::ThemeSet,
 }
 
 impl Buffer {
-    pub fn new(path: String, highlighter: syntect::parsing::SyntaxDefinition, ts: syntect::highlighting::ThemeSet) -> Buffer {
+    pub fn new(path: PathBuf, highlighter: syntect::parsing::SyntaxDefinition, ts: syntect::highlighting::ThemeSet) -> Buffer {
         Buffer {
             lines: vec![],
             path: path,

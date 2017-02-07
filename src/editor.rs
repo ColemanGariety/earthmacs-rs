@@ -13,6 +13,7 @@ use buffer::Buffer;
 use window::Window;
 use window_tree::WindowTree;
 use cell::Cell;
+use drawer::Drawer;
 
 const NORTH: usize = 1;
 const SOUTH: usize = 2;
@@ -22,15 +23,18 @@ const WEST: usize = 4;
 pub struct Editor {
     pub buffers: Vec<Buffer>,
     pub window_tree: WindowTree,
-    pub drawer: Option<String>,
+    pub drawer: Option<Drawer>,
 }
 
 
 impl Editor {
     pub fn new() -> Editor {
+        let mut window_tree = WindowTree::new(None);
+        window_tree.leaf = Window::new();
+        window_tree.leaf.active = true;
         Editor {
             buffers: vec![],
-            window_tree: WindowTree::new(None),
+            window_tree: window_tree,
             drawer: None,
         }
     }
@@ -55,6 +59,7 @@ impl Editor {
                     "find_char" => { self.handle_find_char(key); },
                     "replace" => { self.handle_replace(key); },
                     "execute" => { self.handle_execute(key); },
+                    "find_files" => { self.handle_find_files(key); },
                     _ => ()
                 }
             }
@@ -62,7 +67,7 @@ impl Editor {
     }
 
 
-    pub fn open(&mut self, path: String) {
+    pub fn open(&mut self, path: PathBuf) {
         match File::open(&path) {
             Ok(f) => {
                 let reader = BufReader::new(f);
@@ -87,17 +92,13 @@ impl Editor {
                                     }
                                 }
                             }
-
-                            self.window_tree = WindowTree::new(None);
-                            self.window_tree.leaf = Window::new();
-                            self.window_tree.leaf.active = true;
                             self.buffers.push(buf);
                         }
                     }
                     None => (),
                 };                
             },
-            Err(_) => ()
+            Err(err) => ()
         }
     }
 
@@ -106,11 +107,19 @@ impl Editor {
         let mut max_x = 0;
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
         self.window_tree.draw(&self.buffers, max_x, max_y, 0, 0);
-        doupdate();
         let ref active = self.window_tree.find_active_window().unwrap();
-        wmove(active.pane, active.cursor_y - active.scroll_y + 1, active.cursor_x + 1);
-        wnoutrefresh(active.pane);
-        doupdate();
+
+        match active.mode.clone().as_str() {
+            "find_files" => {
+                self.drawer.as_ref().unwrap().draw(max_x, max_y);
+                refresh();
+            },
+            _ => {
+                wmove(active.pane, active.cursor_y - active.scroll_y + 1, active.cursor_x + 1);
+                wnoutrefresh(active.pane);
+                doupdate();
+            }
+        }
     }
 
     fn split_towards(&mut self, direction: usize) {

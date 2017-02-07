@@ -13,6 +13,7 @@ use std::{env};
 use ncurses::*;
 use termkey::*;
 use editor::Editor;
+use std::path::Path;
 
 mod editor;
 mod mode;
@@ -22,6 +23,7 @@ mod window;
 mod window_tree;
 mod cell;
 mod util;
+mod drawer;
 
 fn main() {
     initscr();
@@ -30,6 +32,7 @@ fn main() {
     keypad(stdscr(), true);
     start_color();
     use_default_colors();
+    refresh();
 
     for i in 0..255 {
         init_pair(i, i, -1);
@@ -40,7 +43,7 @@ fn main() {
     let ed = &mut Editor::new();
 
     if let Some(filename) = env::args().nth(1) {
-        ed.open(filename);
+        ed.open(Path::new(&filename).to_path_buf());
         ed.draw();
 
         let mut tk = TermKey::new(0, c::TERMKEY_FLAG_CTRLC);

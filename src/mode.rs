@@ -3,6 +3,8 @@ use std;
 use editor::Editor;
 use window::Window;
 use buffer::Buffer;
+use drawer::Drawer;
+use std::path::Path;
 use ncurses::*;
 
 impl Editor {
@@ -206,11 +208,36 @@ impl Editor {
 
         match key {
             "<C-f>" => {
-                self.drawer = Some("find_files".to_string());
+                window.mode = "find_files".to_string();
+                self.drawer = Some(Drawer::new_find_files());
             },
             _ => {
                 window.mode = "normal".to_string();
             }
+        }
+    }
+
+    pub fn handle_find_files(&mut self, key: &str) {
+        match key {
+            "<C-g>" => {
+                let ref mut window = self.window_tree.find_active_window().unwrap();
+                window.mode = "normal".to_string();
+            },
+            "<Enter>" => {
+                let ref folder = self.drawer.as_ref().unwrap().value.clone();
+                let ref filename = self.drawer.as_ref().unwrap().lines[self.drawer.as_ref().unwrap().active_line_index as usize].clone();
+                self.open(Path::new(folder).join(filename));
+                let ref mut active = self.window_tree.find_active_window().unwrap();
+                active.buffer_index = (self.buffers.len() - 1) as i32;
+                active.mode = "normal".to_string();
+            },
+            "<C-n>" => {
+                self.drawer.as_mut().unwrap().next_line();
+            },
+            "<C-p>" => {
+                self.drawer.as_mut().unwrap().prev_line();
+            },
+            _ => {}
         }
     }
 }
