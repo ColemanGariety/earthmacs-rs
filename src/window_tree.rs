@@ -1,16 +1,12 @@
-use std;
 use buffer::Buffer;
-use editor::Editor;
 use window::Window;
 use ncurses::*;
-use ansi_term;
-use regex::Regex;
 
 static COLOR_PAIR_DEFAULT: i16 = 1;
 
-const NORTH: usize = 1;
-const SOUTH: usize = 2;
-const EAST: usize = 3;
+// const NORTH: usize = 1;
+// const SOUTH: usize = 2;
+// const EAST: usize = 3;
 const WEST: usize = 4;
 
 #[derive(Clone)]
@@ -108,16 +104,21 @@ impl WindowTree {
             }
         } else {
             let ref buffer = buffers[self.leaf.buffer_index as usize];
-            let lines = buffer.lines.iter().skip(self.leaf.scroll_y as usize).take(height as usize);
+            let mut lines = buffer.lines.iter().skip(self.leaf.scroll_y as usize).take(height as usize);
 
-            for (index, line) in lines.enumerate() {
+            for index in 0..height {
                 wmove(self.leaf.pane, (index + 1) as i32, 0);
                 wclrtoeol(self.leaf.pane);
                 waddstr(self.leaf.pane, " ");
-                for ch in line {
-                    wattron(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
-                    waddstr(self.leaf.pane, ch.ch.to_string().as_str());
-                    wattroff(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
+                match lines.next() {
+                    Some(line) => {
+                        for ch in line {
+                            wattron(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
+                            waddstr(self.leaf.pane, ch.ch.to_string().as_str());
+                            wattroff(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
+                        }
+                    },
+                    None => ()
                 }
             }
 
@@ -187,24 +188,5 @@ impl WindowTree {
                 None => ()
             }
         }
-    }
-
-    pub fn active_window_height(&mut self, width: i32, height: i32) -> Option<i32> {
-        if self.leaf.active {
-            return Some(height);
-        } else {
-            let mut extra_width = 0;
-            let n = self.branches.len() as i32;
-            for (i, branch) in &mut self.branches.iter_mut().enumerate() {
-                if i == (n - 1) as usize { extra_width = width % n; }
-                match branch.active_window_height((width / n) + extra_width, height) {
-                    Some(height) => {
-                        return Some(height);
-                    },
-                    None => ()
-                };
-            }
-        }
-        None
     }
 }

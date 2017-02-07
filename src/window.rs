@@ -1,7 +1,5 @@
-use std::cmp::{min, max};
+use std::cmp::{max};
 use ncurses::*;
-use editor::Editor;
-use buffer::Buffer;
 
 #[derive(Clone)]
 pub struct Window {

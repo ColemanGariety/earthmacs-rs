@@ -1,8 +1,6 @@
-use std::cmp::{min, max};
+use std::cmp::{min};
 use std;
 use editor::Editor;
-use window::Window;
-use buffer::Buffer;
 use drawer::Drawer;
 use std::path::Path;
 use ncurses::*;
@@ -204,7 +202,6 @@ impl Editor {
     pub fn handle_execute(&mut self, key: &str) {
         let ref mut window_tree = self.window_tree;
         let ref mut window = window_tree.find_active_window().unwrap();
-        let ref mut buffer = self.buffers[window.buffer_index as usize];
 
         match key {
             "<C-f>" => {
@@ -232,10 +229,10 @@ impl Editor {
                 active.mode = "normal".to_string();
             },
             "<C-n>" => {
-                self.drawer.as_mut().unwrap().next_line();
+                self.drawer.as_mut().unwrap().next_item();
             },
             "<C-p>" => {
-                self.drawer.as_mut().unwrap().prev_line();
+                self.drawer.as_mut().unwrap().prev_item();
             },
             _ => {}
         }

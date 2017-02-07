@@ -4,7 +4,7 @@ use std::io::BufRead;
 use ncurses::*;
 use std::path::PathBuf;
 use syntect::parsing::SyntaxSet;
-use syntect::highlighting::{ThemeSet, Style};
+use syntect::highlighting::ThemeSet;
 use syntect::easy::HighlightLines;
 use std::path::Path;
 use util;
@@ -75,11 +75,11 @@ impl Editor {
                 let ts = ThemeSet::load_defaults();
                 let p = Path::new(&path);
                 ps.link_syntaxes();
-                let syntax_instance = match p.extension() {
+                match p.extension() {
                     Some(e) => {
                         if let Some(inst) = ps.find_syntax_by_extension(e.to_str().unwrap()) {
-                            let mut buf = Buffer::new(path.clone(), inst.clone(), ts);
-                            let theme = buf.ts.themes["base16-ocean.dark"].clone();
+                            let mut buf = Buffer::new(path.clone(), Some(inst.clone()), Some(ts));
+                            let theme = buf.ts.as_ref().unwrap().themes["base16-ocean.dark"].clone();
                             let mut h = HighlightLines::new(inst, &theme);
                             for (index, line) in reader.lines().enumerate() {
                                 let ln = line.unwrap();
@@ -95,10 +95,20 @@ impl Editor {
                             self.buffers.push(buf);
                         }
                     }
-                    None => (),
-                };                
+                    None => {
+                        let mut buf = Buffer::new(path.clone(), None, None);
+                        for (index, line) in reader.lines().enumerate() {
+                            buf.lines.push(vec![]);
+                            let ln = line.unwrap();
+                            for ch in ln.chars() {
+                                buf.lines[index].push(Cell::new(ch, 0));
+                            }
+                        }
+                        self.buffers.push(buf);
+                    }
+                };
             },
-            Err(err) => ()
+            Err(_) => ()
         }
     }
 

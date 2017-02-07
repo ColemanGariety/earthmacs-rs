@@ -25,10 +25,12 @@ impl Drawer {
     pub fn draw(&self, max_x: i32, max_y: i32) {
         let mut y = max_y - 1;
         let top_border = (0..max_x).map(|_| "-").collect::<String>();
-        for line in self.lines.iter().rev() {
+        for (index, line) in self.lines.iter().enumerate() {
             mv(y, 0);
             clrtoeol();
+            if index == self.active_line_index as usize {attron(COLOR_PAIR(50));}
             addstr(line.as_str());
+            if index == self.active_line_index as usize {attroff(COLOR_PAIR(50));}
             y -= 1;
         }
         mv(y, 0);
@@ -37,11 +39,11 @@ impl Drawer {
         attroff(COLOR_PAIR(COLOR_PAIR_DEFAULT));
     }
 
-    pub fn next_line(&mut self) {
-        self.active_line_index = min((self.lines.len() - 1) as i32, self.active_line_index - 1);
+    pub fn next_item(&mut self) {
+        self.active_line_index = max(0, self.active_line_index - 1);
     }
 
-    pub fn prev_line(&mut self) {
-        self.active_line_index = max(0, self.active_line_index - 1);
+    pub fn prev_item(&mut self) {
+        self.active_line_index = min((self.lines.len() - 1) as i32, self.active_line_index + 1);
     }
 }
