@@ -22,6 +22,7 @@ const WEST: usize = 4;
 pub struct Editor {
     pub buffers: Vec<Buffer>,
     pub window_tree: WindowTree,
+    pub drawer: Option<String>,
 }
 
 
@@ -30,6 +31,7 @@ impl Editor {
         Editor {
             buffers: vec![],
             window_tree: WindowTree::new(None),
+            drawer: None,
         }
     }
 
@@ -52,6 +54,7 @@ impl Editor {
                     "insert" => { self.handle_insert(key); },
                     "find_char" => { self.handle_find_char(key); },
                     "replace" => { self.handle_replace(key); },
+                    "execute" => { self.handle_execute(key); },
                     _ => ()
                 }
             }

@@ -78,6 +78,9 @@ impl Editor {
                     }
                 }
             },
+            "<C-x>" => {
+                window.mode = "execute".to_string();
+            },
             "<C-c>" => { endwin(); std::process::exit(0); },
             "<C-f>" => {
                 for _ in 1..(window_height - 2) {
@@ -193,6 +196,21 @@ impl Editor {
                 buffer.insert(key, x, y);
                 window.mode = "normal".to_string();
             },
+        }
+    }
+
+    pub fn handle_execute(&mut self, key: &str) {
+        let ref mut window_tree = self.window_tree;
+        let ref mut window = window_tree.find_active_window().unwrap();
+        let ref mut buffer = self.buffers[window.buffer_index as usize];
+
+        match key {
+            "<C-f>" => {
+                self.drawer = Some("find_files".to_string());
+            },
+            _ => {
+                window.mode = "normal".to_string();
+            }
         }
     }
 }
