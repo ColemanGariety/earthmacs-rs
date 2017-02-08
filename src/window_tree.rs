@@ -122,13 +122,39 @@ impl WindowTree {
                 }
             }
 
+            // position/size
             wresize(self.leaf.pane, height, width);
             mvwin(self.leaf.pane, y, x);
+
+            // border
             if self.leaf.active {
                 wattron(self.leaf.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
             }
             box_(self.leaf.pane, 0, 0);
+
+            // name label
+            let name = buffer.path.file_name().unwrap().to_str().unwrap();
+            if width >= name.len() as i32 + 4 {
+                wmove(self.leaf.pane, height - 1, 4);
+                waddstr(self.leaf.pane, name);
+            }
+
+            // (x,y) label
+            let xy_label = format!("({},{})", self.leaf.cursor_y, self.leaf.cursor_x);
+            if width >= (4 + name.len() + 4) as i32 + xy_label.len() as i32 {
+                wmove(self.leaf.pane, height - 1, (4 + name.len() + 4) as i32);
+                waddstr(self.leaf.pane, xy_label.as_str());
+            }
+
+            if width >= self.leaf.mode.len() as i32 + 4 {
+                // mode label
+                wmove(self.leaf.pane, height - 1, width - 4 - self.leaf.mode.len() as i32);
+                waddstr(self.leaf.pane, self.leaf.mode.as_str());
+            }
+
             wattroff(self.leaf.pane, COLOR_PAIR(COLOR_PAIR_DEFAULT));
+
+            // refresh
             wnoutrefresh(self.leaf.pane);
         }
     }
