@@ -8,6 +8,5 @@ ncurses = "5.85.0"
 termkey-rs = { git = "git://github.com/mathall/termkey-rs.git" }
 syntect = "1.0.4"
 libc = "0.2.20"
-ansi_term = "0.9"
 lazy_static = "0.1.*"
 regex = "0.1"

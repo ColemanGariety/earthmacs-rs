@@ -10,7 +10,6 @@ impl Editor {
         let mut max_x = 0;
         let mut max_y = 0;
         getmaxyx(stdscr(), &mut max_y, &mut max_x);
-        // let window_height = self.window_tree.active_window_height(max_x, max_y).unwrap();
         let window_height = max_y;
         let window = self.window_tree.find_active_window().unwrap();
         let ref mut buffer = self.buffers[window.buffer_index as usize];
@@ -202,11 +201,12 @@ impl Editor {
     pub fn handle_execute(&mut self, key: &str) {
         let ref mut window_tree = self.window_tree;
         let ref mut window = window_tree.find_active_window().unwrap();
+        let ref mut buffer = self.buffers[window.buffer_index as usize];
 
         match key {
             "<C-f>" => {
                 window.mode = "find_files".to_string();
-                self.drawer = Some(Drawer::new_find_files());
+                self.drawer = Some(Drawer::new_find_files(&buffer.path));
             },
             _ => {
                 window.mode = "normal".to_string();
@@ -221,9 +221,8 @@ impl Editor {
                 window.mode = "normal".to_string();
             },
             "<Enter>" => {
-                let ref folder = self.drawer.as_ref().unwrap().value.clone();
-                let ref filename = self.drawer.as_ref().unwrap().lines[self.drawer.as_ref().unwrap().active_line_index as usize].clone();
-                self.open(Path::new(folder).join(filename));
+                let ref value = Path::new(&self.drawer.as_ref().unwrap().value.clone()).join(self.drawer.as_ref().unwrap().lines[self.drawer.as_ref().unwrap().active_line_index as usize].as_str());
+                self.open(Path::new(&value).to_path_buf());
                 let ref mut active = self.window_tree.find_active_window().unwrap();
                 active.buffer_index = (self.buffers.len() - 1) as i32;
                 active.mode = "normal".to_string();
@@ -234,7 +233,9 @@ impl Editor {
             "<C-p>" => {
                 self.drawer.as_mut().unwrap().prev_item();
             },
-            _ => {}
+            _ => {
+                self.drawer.as_mut().unwrap().handle_key(key);
+            }
         }
     }
 }

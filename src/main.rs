@@ -2,7 +2,6 @@ extern crate syntect;
 extern crate ncurses;
 extern crate termkey;
 extern crate libc;
-extern crate ansi_term;
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
