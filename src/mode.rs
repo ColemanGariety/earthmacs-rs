@@ -221,7 +221,12 @@ impl Editor {
                 window.mode = "normal".to_string();
             },
             "<Enter>" => {
-                let ref value = Path::new(&self.drawer.as_ref().unwrap().value.clone()).join(self.drawer.as_ref().unwrap().lines[self.drawer.as_ref().unwrap().active_line_index as usize].as_str());
+                let v = self.drawer.as_ref().unwrap().value.clone();
+                let mut p = Path::new(&v);
+                if !p.is_dir() {
+                    p = p.parent().unwrap();
+                }
+                let ref value = p.join(self.drawer.as_ref().unwrap().lines[self.drawer.as_ref().unwrap().active_line_index as usize].as_str());
                 self.open(Path::new(&value).to_path_buf());
                 let ref mut active = self.window_tree.find_active_window().unwrap();
                 active.buffer_index = (self.buffers.len() - 1) as i32;

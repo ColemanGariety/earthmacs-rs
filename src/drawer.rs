@@ -86,7 +86,11 @@ impl Drawer {
         }
         let file = Path::new(v).file_name().unwrap().to_str().to_owned().unwrap();
         let paths: Vec<String> = fs::read_dir(dir).unwrap().map(|res| res.unwrap().file_name().to_string_lossy().into_owned()).collect();
-        self.lines = paths.iter().filter(|path| (fuzz::ratio(file, path) > 10 && fuzz::partial_ratio(file, path) > 80) || fuzz::token_sort_ratio(file, path, true, true) > 50).cloned().collect();
+        if Path::new(v).is_dir() {
+            self.lines = paths;
+        } else {
+            self.lines = paths.iter().filter(|path| (fuzz::ratio(file, path) > 10 && fuzz::partial_ratio(file, path) > 80) || fuzz::token_sort_ratio(file, path, true, true) > 50).cloned().collect();
+        }
         self.active_line_index = self.lines.len() as i32 - 1;
     }
 
@@ -99,11 +103,20 @@ impl Drawer {
                 self.update_list();
             },
             "<Tab>" => {
-                let p = PathBuf::from(&self.value).join(&self.lines[self.active_line_index as usize]);
+                let v = PathBuf::from(&self.value);
+                let mut p;
+                if !v.is_dir() {
+                    p = v.parent().unwrap().to_path_buf();
+                } else {
+                    p = v;
+                }
+                p = p.join(&self.lines[self.active_line_index as usize]);
                 if p.is_dir() {
                     self.value = p.to_str().unwrap().to_string() + "/";
-                    self.update_list();
+                } else {
+                    self.value = p.to_str().unwrap().to_string();
                 }
+                self.update_list();
             },
             "<C-l>" => {
                 let old = self.value.clone();
