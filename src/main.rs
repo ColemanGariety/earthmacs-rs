@@ -3,6 +3,7 @@ extern crate ncurses;
 extern crate termkey;
 extern crate libc;
 extern crate regex;
+extern crate fuzzyrusty;
 #[macro_use]
 extern crate lazy_static;
 

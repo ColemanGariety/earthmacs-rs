@@ -3,6 +3,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::cmp::{min, max};
 use ncurses::*;
+use fuzzyrusty::fuzz;
 
 pub struct Drawer {
     pub prompt: String,
@@ -83,9 +84,9 @@ impl Drawer {
         if pb.to_string_lossy().to_owned().chars().last().unwrap() != '/' {
             dir = pb.parent().unwrap().to_owned();
         }
-        let file = Path::new(v).file_name().unwrap();
+        let file = Path::new(v).file_name().unwrap().to_str().to_owned().unwrap();
         let paths: Vec<String> = fs::read_dir(dir).unwrap().map(|res| res.unwrap().file_name().to_string_lossy().into_owned()).collect();
-        self.lines = paths.iter().filter(|path| compare(path, file.to_str().unwrap(), min(path.len(), file.to_str().unwrap().len())) > 0.0).cloned().collect();
+        self.lines = paths.iter().filter(|path| (fuzz::ratio(file, path) > 10 && fuzz::partial_ratio(file, path) > 80) || fuzz::token_sort_ratio(file, path, true, true) > 50).cloned().collect();
         self.active_line_index = self.lines.len() as i32 - 1;
     }
 
@@ -117,48 +118,4 @@ impl Drawer {
             }
         }
     }
-}
-
-
-pub fn compare(a: &str, b: &str, size: usize) -> f64 {
-    if a == b {
-        return 1.0;
-    }
-
-    //loop through first string add unique ngrams to vec
-    let mut ngrams = Vec::new();
-    for ngram in compute_ngram_tokens(a, size) {
-        if !ngrams.contains(&ngram) {
-            ngrams.push(ngram);
-        }
-    }
-
-    //loop through second string
-    let mut intersection = 0;
-    let mut difference = 0;
-    for ngram in compute_ngram_tokens(b, size) {
-        if ngrams.contains(&ngram) {
-            intersection += 1
-        } else {
-            difference += 1;
-        }
-    }
-
-    intersection as f64 / ((ngrams.len() as i32 + difference) as f64)
-}
-
-pub fn compute_ngram_tokens(s: &str, size: usize) -> Vec<String> {
-    let mut tokens = Vec::new();
-
-    if s.len() < size {
-        tokens.push(format!("{s:<width$}", s=s, width=size));
-    } else {
-        for i in 0..(s.len() - size + 1) {
-            unsafe {
-                tokens.push(s.slice_unchecked(i, i + size).to_string());
-            }
-        }
-    }
-
-    tokens
 }
