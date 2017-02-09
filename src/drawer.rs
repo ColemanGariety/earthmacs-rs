@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 use std::cmp::{min, max};
 use ncurses::*;
@@ -22,7 +23,7 @@ impl Drawer {
         
         Drawer{
             prompt: "Find files: ".to_string(),
-            value: dir.to_str().unwrap().to_string(),
+            value: dir.to_str().unwrap().to_string() + "/",
             lines: paths,
             active_line_index: (index - 1) as i32,
         }
@@ -76,13 +77,15 @@ impl Drawer {
     }
 
     pub fn update_list(&mut self) {
-        let pb = PathBuf::from(&self.value);
+        let v = &self.value;
+        let pb = PathBuf::from(v);
         let mut dir = pb.clone();
-        if !pb.is_dir() {
+        if pb.to_string_lossy().to_owned().chars().last().unwrap() != '/' {
             dir = pb.parent().unwrap().to_owned();
         }
+        let file = Path::new(v).file_name().unwrap();
         let paths: Vec<String> = fs::read_dir(dir).unwrap().map(|res| res.unwrap().file_name().to_string_lossy().into_owned()).collect();
-        self.lines = paths;
+        self.lines = paths.iter().filter(|path| compare(path, file.to_str().unwrap(), min(path.len(), file.to_str().unwrap().len())) > 0.0).cloned().collect();
         self.active_line_index = self.lines.len() as i32 - 1;
     }
 
@@ -93,6 +96,13 @@ impl Drawer {
                     self.value = self.value[..(self.value.len() - 1)].to_string();
                 }
                 self.update_list();
+            },
+            "<Tab>" => {
+                let p = PathBuf::from(&self.value).join(&self.lines[self.active_line_index as usize]);
+                if p.is_dir() {
+                    self.value = p.to_str().unwrap().to_string() + "/";
+                    self.update_list();
+                }
             },
             "<C-l>" => {
                 let old = self.value.clone();
@@ -107,4 +117,48 @@ impl Drawer {
             }
         }
     }
+}
+
+
+pub fn compare(a: &str, b: &str, size: usize) -> f64 {
+    if a == b {
+        return 1.0;
+    }
+
+    //loop through first string add unique ngrams to vec
+    let mut ngrams = Vec::new();
+    for ngram in compute_ngram_tokens(a, size) {
+        if !ngrams.contains(&ngram) {
+            ngrams.push(ngram);
+        }
+    }
+
+    //loop through second string
+    let mut intersection = 0;
+    let mut difference = 0;
+    for ngram in compute_ngram_tokens(b, size) {
+        if ngrams.contains(&ngram) {
+            intersection += 1
+        } else {
+            difference += 1;
+        }
+    }
+
+    intersection as f64 / ((ngrams.len() as i32 + difference) as f64)
+}
+
+pub fn compute_ngram_tokens(s: &str, size: usize) -> Vec<String> {
+    let mut tokens = Vec::new();
+
+    if s.len() < size {
+        tokens.push(format!("{s:<width$}", s=s, width=size));
+    } else {
+        for i in 0..(s.len() - size + 1) {
+            unsafe {
+                tokens.push(s.slice_unchecked(i, i + size).to_string());
+            }
+        }
+    }
+
+    tokens
 }
