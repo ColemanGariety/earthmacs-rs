@@ -40,11 +40,14 @@ impl Editor {
     }
 
     pub fn handle_input(&mut self, key: &str) {
+        let mut max_y = 0;
+        let mut max_x = 0;
+        getmaxyx(stdscr(), &mut max_y, &mut max_x);
         match key {
-            "<M-h>" => { self.window_tree.focus(WEST) },
-            "<M-j>" => { self.window_tree.focus(SOUTH) },
-            "<M-k>" => { self.window_tree.focus(NORTH) },
-            "<M-l>" => { self.window_tree.focus(EAST) },
+            "<M-h>" => { self.window_tree.focus(WEST, max_x, max_y, 0, 0) },
+            "<M-j>" => { self.window_tree.focus(SOUTH, max_x, max_y, 0, 0) },
+            "<M-k>" => { self.window_tree.focus(NORTH, max_x, max_y, 0, 0) },
+            "<M-l>" => { self.window_tree.focus(EAST, max_x, max_y, 0, 0) },
             "<M-H>" => { self.split_towards(WEST); },
             "<M-J>" => { self.split_towards(SOUTH); },
             "<M-K>" => { self.split_towards(NORTH); },
@@ -135,7 +138,7 @@ impl Editor {
     fn split_towards(&mut self, direction: usize) {
         match direction {
             NORTH | SOUTH => {
-                // self.window_tree.find_active_window().split_vertically();
+                self.window_tree.find_active_window_tree().unwrap().split_vertically();
             },
             EAST | WEST => {
                 self.window_tree.find_active_window_tree().unwrap().split_horizontally();

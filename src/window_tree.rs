@@ -4,9 +4,9 @@ use ncurses::*;
 
 static COLOR_PAIR_DEFAULT: i16 = 1;
 
-// const NORTH: usize = 1;
-// const SOUTH: usize = 2;
-// const EAST: usize = 3;
+const NORTH: usize = 1;
+const SOUTH: usize = 2;
+const EAST: usize = 3;
 const WEST: usize = 4;
 
 #[derive(Clone)]
@@ -14,6 +14,14 @@ pub struct WindowTree {
     pub branches: Vec<WindowTree>,
     pub leaf: Window,
     pub parent: Option<*mut WindowTree>,
+    pub direction: String,
+}
+
+pub struct VirtualWindow {
+    width: i32,
+    height: i32,
+    x: i32,
+    y: i32,
 }
 
 impl WindowTree {
@@ -22,6 +30,7 @@ impl WindowTree {
             branches: vec![],
             leaf: Window::new(),
             parent: parent,
+            direction: "horizontal".to_string(),
         }
     }
 
@@ -53,44 +62,103 @@ impl WindowTree {
         None
     }
 
-    pub fn focus(&mut self, direction: usize) {
-        let active_tree = self.find_active_window_tree().unwrap();
-        let mut is_right_index = 1;
-        let mut is_left_index = 0;
-        let mut is_right = false;
-        let mut is_left = false;
-        let mut current = active_tree as *mut WindowTree;
+    pub fn find_active_window_height(&mut self, width: i32, height: i32, x: i32, y: i32) -> i32 {
+        let mut virtual_windows = vec![];
+        virtual_draw(self, width, height, x, y, &mut virtual_windows);
 
-        if direction == WEST {
-            is_right_index = 0;
-            is_left_index = 1;
+        return virtual_windows.iter().find(|&&(ref leaf, ref vw)| leaf.active).unwrap().1.height;
+
+        fn virtual_draw<'a>(window: &'a mut WindowTree, width: i32, height: i32, x: i32, y: i32, windows: &mut Vec<(&'a mut Window, VirtualWindow)>) {
+            let n = window.branches.len() as i32;
+            if n > 0 {
+                let mut extra_width = 0;
+                let mut extra_height = 0;
+                for (i, branch) in &mut window.branches.iter_mut().enumerate() {
+                    if i == (n - 1) as usize {
+                        extra_width = width % n;
+                        extra_height = height % n;
+                    }
+                    if window.direction.as_str() == "horizontal" {
+                        virtual_draw(branch, (width / n) + extra_width, height, x + ((width / n) * (i as i32)), y, windows);
+                    } else {
+                        virtual_draw(branch, width, (height / n) + extra_height, x, y + ((height / n) * (i as i32)), windows)
+                    }
+                }
+            } else {
+                windows.push((&mut window.leaf,VirtualWindow{
+                    width: width,
+                    height: height,
+                    x: x,
+                    y: y,
+                }));
+            }
+        }
+    }
+
+    pub fn focus(&mut self, direction: usize, width: i32, height: i32, x: i32, y: i32) {
+        let mut virtual_windows = vec![];
+        virtual_draw(self, width, height, x, y, &mut virtual_windows);
+
+        let active_index = virtual_windows.iter().position(|&(ref leaf, ref vw)| leaf.active).unwrap();
+        let next_index = virtual_windows.iter().position(|&(ref leaf, ref wm)| {
+            let active = &virtual_windows[active_index];
+            match direction {
+                NORTH => {
+                    wm.y + wm.height == active.1.y &&
+                        wm.x <= active.1.x + active.0.cursor_x + 2 &&
+                        wm.x + wm.width >= active.1.x + active.0.cursor_x + 2
+                },
+                SOUTH => {
+                    wm.y == active.1.y + active.1.height &&
+                        wm.x <= active.1.x + active.0.cursor_x + 2 &&
+                        wm.x + wm.width >= active.1.x + active.0.cursor_x + 2
+                },
+                EAST => {
+                    wm.x == active.1.x + active.1.width &&
+                        wm.y <= active.1.y + (active.0.cursor_y - active.0.scroll_y) + 2 &&
+                        wm.y + wm.height >= active.1.y + (active.0.cursor_y - active.0.scroll_y) + 2
+                },
+                WEST => {
+                    wm.x + wm.width == active.1.x &&
+                        wm.y <= active.1.y + (active.0.cursor_y - active.0.scroll_y) + 2 &&
+                        wm.y + wm.height >= active.1.y + (active.0.cursor_y - active.0.scroll_y) + 2
+                },
+                _ => { false }
+            }
+        });
+
+        match next_index {
+            Some(next_index) => {
+                virtual_windows[active_index].0.active = false;
+                virtual_windows[next_index].0.active = true;
+            },
+            None => ()
         }
 
-        unsafe {
-            while is_right == false {
-                match (*current).parent {
-                    Some(parent) => {
-                        current = parent;
-                    },
-                    None => return
-                };
-                match (*current).branches[is_right_index].find_active_window_tree() {
-                    None => {
-                        is_right = true;
-                        current = &mut (*current).branches[is_right_index];
-                    },
-                    _ => ()
+        fn virtual_draw<'a>(window: &'a mut WindowTree, width: i32, height: i32, x: i32, y: i32, windows: &mut Vec<(&'a mut Window, VirtualWindow)>) {
+            let n = window.branches.len() as i32;
+            if n > 0 {
+                let mut extra_width = 0;
+                let mut extra_height = 0;
+                for (i, branch) in &mut window.branches.iter_mut().enumerate() {
+                    if i == (n - 1) as usize {
+                        extra_width = width % n;
+                        extra_height = height % n;
+                    }
+                    if window.direction.as_str() == "horizontal" {
+                        virtual_draw(branch, (width / n) + extra_width, height, x + ((width / n) * (i as i32)), y, windows);
+                    } else {
+                        virtual_draw(branch, width, (height / n) + extra_height, x, y + ((height / n) * (i as i32)), windows)
+                    }
                 }
+            } else {
+                windows.push((&mut window.leaf,VirtualWindow{
+                    width: width,
+                    height: height,
+                    x: x,
+                    y: y,
+                }));
             }
-            while is_left == false {
-                if (*current).branches.len() == 0 {
-                    is_left = true;
-                } else {
-                    current = &mut (*current).branches[is_left_index];
-                }
-            }
-            active_tree.leaf.active = false;
-            (*current).leaf.active = true;
         }
     }
 
@@ -98,9 +166,17 @@ impl WindowTree {
         let n = self.branches.len() as i32;
         if n > 0 {
             let mut extra_width = 0;
+            let mut extra_height = 0;
             for (i, branch) in &mut self.branches.iter_mut().enumerate() {
-                if i == (n - 1) as usize { extra_width = width % n; }
-                branch.draw(buffers, (width / n) + extra_width, height, x + ((width / n) * (i as i32)), y);
+                if i == (n - 1) as usize {
+                    extra_width = width % n;
+                    extra_height = height % n;
+                }
+                if self.direction.as_str() == "horizontal" {
+                    branch.draw(buffers, (width / n) + extra_width, height, x + ((width / n) * (i as i32)), y);
+                } else {
+                    branch.draw(buffers, width, (height / n) + extra_height, x, y + ((height / n) * (i as i32)))
+                }
             }
         } else {
             let ref buffer = buffers[self.leaf.buffer_index as usize];
@@ -160,6 +236,7 @@ impl WindowTree {
     }
 
     pub fn split_horizontally(&mut self) {
+        self.direction = "horizontal".to_string();
         let mut left = WindowTree::new(Some(self));
         left.leaf = self.leaf.clone();
         left.leaf.active = true;
@@ -170,6 +247,11 @@ impl WindowTree {
         self.branches.push(left);
         self.branches.push(right);
         self.leaf = Window::new();
+    }
+
+    pub fn split_vertically(&mut self) {
+        self.split_horizontally();
+        self.direction = "vertical".to_string();
     }
 
     pub fn find_leaf(&mut self) -> Option<&mut Window> {
@@ -215,4 +297,5 @@ impl WindowTree {
             }
         }
     }
+
 }

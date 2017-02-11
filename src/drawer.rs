@@ -21,7 +21,6 @@ impl Drawer {
         if path.is_dir() { dir = path.to_owned(); }
         else { dir = path.parent().unwrap().to_path_buf(); }
         let paths: Vec<String> = fs::read_dir(dir.clone()).unwrap().map(|res| res.unwrap().file_name().to_string_lossy().into_owned()).collect();
-        let index = paths.len();
         
         Drawer{
             prompt: "Find files: ".to_string(),
@@ -64,8 +63,6 @@ impl Drawer {
         clrtoeol();
         let ln = format!("{}{}", self.prompt, self.value);
         addstr(ln.as_str());
-        y += 1;
-
     }
 
     pub fn next_item(&mut self) {
