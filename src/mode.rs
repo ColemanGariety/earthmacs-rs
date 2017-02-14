@@ -84,7 +84,7 @@ impl Editor {
                     .expect("Failed to grab from clipboard. Is xsel installed?");
 
                 let mut s = String::new();
-                p.stdout.unwrap().read_to_string(&mut s);
+                p.stdout.unwrap().read_to_string(&mut s).expect("Failed to grab from clipboard. Make sure xsel is working properly.");
                 let mut lines = s.split("\n");
                 if lines.clone().count() == 1 {
                     buffer.insert(lines.next().unwrap(), window.col, window.row);
@@ -150,6 +150,7 @@ impl Editor {
             "d" => {
                 let row = window.cursor_y;
                 buffer.remove_line(row as usize);
+                window.cursor_x  = min(buffer.eol(window.cursor_y), window.col);
                 window.mode = "normal".to_string();
             },
             _ => ()
@@ -324,7 +325,6 @@ impl Editor {
             "<Escape>" => {
                 let window = self.window_tree.find_active_window().unwrap();
                 window.mode = "normal".to_string();
-                let ref mut buffer = self.buffers[window.buffer_index as usize];
                 window.mark = None;
             },
             "y" => {
@@ -334,21 +334,21 @@ impl Editor {
                     Some(mark) => {
                         // window.mode = "normal".to_string();
 
-                        let mut starts_with_mark = false;
+                        let starts_with_mark;
                         if mark.0 == window.row {
                             starts_with_mark = mark.1 <= window.col;
                         } else {
                             starts_with_mark = mark.0 < window.row;
                         }
 
-                        let mut lines;
+                        let lines;
                         if starts_with_mark {
                             lines = buffer.lines.iter().skip(mark.0 as usize).take(max(1, window.row - mark.0) as usize);
                         } else {
                             lines = buffer.lines.iter().skip(window.row as usize).take(max(1, mark.0 - window.row) as usize);
                         }
 
-                        let mut region = lines.map(|ln| ln.iter().map(|cell| cell.ch).collect::<String>()).collect::<Vec<String>>().connect("\n");
+                        let region = lines.map(|ln| ln.iter().map(|cell| cell.ch).collect::<String>()).collect::<Vec<String>>().join("\n");
 
                         let mut p = Command::new("xsel")
                             .arg("--clipboard")
@@ -361,7 +361,7 @@ impl Editor {
                         window.mark = None;
                         window.mode = "normal".to_string();
 
-                        p.stdin.as_mut().unwrap().write_all(region.as_bytes());
+                        p.stdin.as_mut().unwrap().write_all(region.as_bytes()).expect("Failed to set clipboard. Make sure xsel is working properly.");
                     },
                     None => ()
                 }

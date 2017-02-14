@@ -1,7 +1,6 @@
 use std::cmp::{max};
 use buffer::Buffer;
 use window::Window;
-use cell::Cell;
 use ncurses::*;
 
 static COLOR_PAIR_DEFAULT: i16 = 1;
@@ -184,8 +183,6 @@ impl WindowTree {
         } else {
             let ref buffer = buffers[self.leaf.buffer_index as usize];
             let mut lines = buffer.lines.iter().skip(self.leaf.scroll_y as usize).take(height as usize);
-            let ref spare = vec![Cell::new('\n', 0)];
-
             let mut has_mark = false;
             let mut starts_with_mark = false;
             match self.leaf.mark {
@@ -207,7 +204,7 @@ impl WindowTree {
                 wclrtoeol(self.leaf.pane);
 
                 match lines.next() {
-                    Some(mut line) => {
+                    Some(line) => {
                         let mut cells = line.iter();
 
                         for x in 0..width {

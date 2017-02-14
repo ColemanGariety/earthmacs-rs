@@ -57,6 +57,7 @@ impl Buffer {
             new.append(&mut (&b[1..]).to_vec());
             self.lines[y as usize] = new;
         }
+        self.highlight_line(y);
     }
 
     pub fn insert(&mut self, c: &str, x: i32, y: i32) {
@@ -72,10 +73,15 @@ impl Buffer {
             new.append(&mut b.to_vec());
         }
 
+        self.lines[y as usize] = new;
+        self.highlight_line(y);
+    }
+
+    pub fn highlight_line(&mut self, y: i32) {
         match self.highlighter {
             Some(ref highlighter) => {
                 let mut h = HighlightLines::new(&highlighter, &self.ts.as_ref().unwrap().themes["base16-ocean.dark"]);
-                let line_string: String = new.iter().cloned().map(|c| c.ch).collect();
+                let line_string: String = self.lines[y as usize].iter().cloned().map(|c| c.ch).collect();
                 self.lines[y as usize] = vec![];
                 let ranges = h.highlight(line_string.as_str());
                 for (style, text) in ranges {
@@ -85,9 +91,7 @@ impl Buffer {
                     }
                 }
             },
-            None => {
-                self.lines[y as usize] = new;
-            }
+            None => ()
         }
     }
 
