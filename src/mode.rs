@@ -1,6 +1,6 @@
 use std::process::{Command, Stdio};
 use std::io::{Read, Write};
-use std::cmp::{min};
+use std::cmp::{min,max};
 use std;
 use editor::Editor;
 use drawer::Drawer;
@@ -62,6 +62,14 @@ impl Editor {
                     window.move_right();
                 }
             },
+            "O" => {
+                buffer.insert_newline(0, window.row);
+                window.mode = "insert".to_string();
+            },
+            "o" => {
+                buffer.insert_newline(0, window.row + 1);
+                window.mode = "insert".to_string();
+            },
             "p" => {
                 let p = Command::new("xsel")
                     .stdin(Stdio::piped())
@@ -73,9 +81,14 @@ impl Editor {
 
                 let mut s = String::new();
                 p.stdout.unwrap().read_to_string(&mut s);
-                for line in s.split("\n") {
-                    buffer.insert_newline(0, window.row);
-                    buffer.insert(line, 0, window.row);
+                let mut lines = s.split("\n");
+                if lines.clone().count() == 1 {
+                    buffer.insert(lines.next().unwrap(), window.col, window.row);
+                } else {
+                    for line in lines {
+                        buffer.insert_newline(window.col, window.row);
+                        buffer.insert(line, window.col, window.row);
+                    }
                 }
             },
             "r" => { window.mode = "replace".to_string() },
@@ -298,12 +311,12 @@ impl Editor {
 
                         let mut lines;
                         if starts_with_mark {
-                            lines = buffer.lines.iter().skip(mark.0 as usize).take((window.row - mark.0) as usize);
+                            lines = buffer.lines.iter().skip(mark.0 as usize).take(max(1, window.row - mark.0) as usize);
                         } else {
-                            lines = buffer.lines.iter().skip(window.row as usize).take((mark.0 - window.row) as usize);
+                            lines = buffer.lines.iter().skip(window.row as usize).take(max(1, mark.0 - window.row) as usize);
                         }
 
-                        let region = lines.map(|ln| ln.iter().map(|cell| cell.ch).collect::<String>()).collect::<Vec<String>>().connect("\n");
+                        let mut region = lines.map(|ln| ln.iter().map(|cell| cell.ch).collect::<String>()).collect::<Vec<String>>().connect("\n");
 
                         let mut p = Command::new("xsel")
                             .arg("--clipboard")
