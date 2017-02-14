@@ -60,6 +60,7 @@ impl Editor {
                     "delete" => { self.handle_delete(key); },
                     "insert" => { self.handle_insert(key); },
                     "find_char" => { self.handle_find_char(key); },
+                    "find_char_backwards" => { self.handle_find_char_backwards(key); },
                     "replace" => { self.handle_replace(key); },
                     "execute" => { self.handle_execute(key); },
                     "find_files" => { self.handle_find_files(key); },

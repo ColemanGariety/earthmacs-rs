@@ -30,6 +30,7 @@ impl Editor {
             },
             "d" => { window.mode = "delete".to_string(); },
             "f" => { window.mode = "find_char".to_string(); },
+            "F" => { window.mode = "find_char_backwards".to_string(); },
             "G" => {
                 while window.scroll_y < buffer.lines.len() as i32 { //
                     window.move_down();
@@ -64,10 +65,13 @@ impl Editor {
             },
             "O" => {
                 buffer.insert_newline(0, window.row);
+                window.move_bol();
                 window.mode = "insert".to_string();
             },
             "o" => {
                 buffer.insert_newline(0, window.row + 1);
+                window.move_down();
+                window.move_bol();
                 window.mode = "insert".to_string();
             },
             "p" => {
@@ -165,6 +169,9 @@ impl Editor {
             "<DEL>" | "<Backspace>" => {
                 let x = window.cursor_x.clone();
                 let y = window.cursor_y.clone();
+
+                if y == 0 && x == 0 { return; }
+
                 if x == 0 {
                     window.move_up();
                     while window.cursor_x < buffer.lines[window.cursor_y as usize].len() as i32 {
@@ -243,6 +250,31 @@ impl Editor {
                     Some(i) => {
                         window.cursor_x += (i + 1) as i32;
                         window.col += (i + 1) as i32;
+                    },
+                    _ => ()
+                }
+                window.mode = "normal".to_string();
+            }
+        }
+    }
+
+    pub fn handle_find_char_backwards(&mut self, key: &str) {
+        let ref mut window_tree = self.window_tree;
+        let ref mut window = window_tree.find_active_window().unwrap();
+        let ref mut buffer = self.buffers[window.buffer_index as usize];
+
+        match key {
+            "<Escape>" => {
+                window.mode = "normal".to_string();
+                window.move_left();
+            },
+            _ => {
+                let y = window.cursor_y as usize;
+                let x = window.cursor_x as usize;
+                match buffer.lines[y].iter().rev().skip(buffer.lines[y].len() - x).position(|c| char::to_string(&c.ch).as_str() == key) {
+                    Some(i) => {
+                        window.cursor_x -= (i + 1) as i32;
+                        window.col -= (i + 1) as i32;
                     },
                     _ => ()
                 }
