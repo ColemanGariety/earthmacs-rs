@@ -27,15 +27,23 @@ impl Buffer {
     pub fn save(&self) {
         // match File::create(&self.path) {
         //     Ok(mut f) => {
-        //         let mut lns = self.lines.join("\n");
-        //         lns.push('\n');
-        //         match f.write_all(lns) {
-        //             Ok(_) => (),
-        //             Err(e) => panic!(e)
-        //         };
+        //         let mut lns = self.lines.join(&Cell::new('\n', 1));
+        //         // lns.push('\n');
+        //         // match f.write_all(lns) {
+        //         //     Ok(_) => (),
+        //         //     Err(e) => panic!(e)
+        //         // };
         //     },
         //     Err(_) => ()
         // }
+    }
+
+    pub fn char_at(&mut self, x: i32, y: i32) -> Option<char> {
+        let ref line = self.lines[y as usize];
+        match line.iter().nth(x as usize) {
+            Some(cell) => { return Some(cell.ch) },
+            None => { return None },
+        }
     }
 
     pub fn remove(&mut self, x: i32, y: i32) {

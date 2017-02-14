@@ -1,3 +1,5 @@
+use std::process::{Command, Stdio};
+use std::io::{Read, Write};
 use std::cmp::{min};
 use std;
 use editor::Editor;
@@ -29,7 +31,7 @@ impl Editor {
             "d" => { window.mode = "delete".to_string(); },
             "f" => { window.mode = "find_char".to_string(); },
             "G" => {
-                while window.scroll_y < buffer.lines.len() as i32 { // 
+                while window.scroll_y < buffer.lines.len() as i32 { //
                     window.move_down();
                 }
             }
@@ -60,7 +62,27 @@ impl Editor {
                     window.move_right();
                 }
             },
+            "p" => {
+                let p = Command::new("xsel")
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .arg("--clipboard")
+                    .arg("--output")
+                    .spawn()
+                    .expect("Failed to grab from clipboard. Is xsel installed?");
+
+                let mut s = String::new();
+                p.stdout.unwrap().read_to_string(&mut s);
+                for line in s.split("\n") {
+                    buffer.insert_newline(0, window.row);
+                    buffer.insert(line, 0, window.row);
+                }
+            },
             "r" => { window.mode = "replace".to_string() },
+            "v" => {
+                window.mode = "visual".to_string();
+                window.mark = Some((window.row, window.col))
+            }
             "x" => {
                 let x = window.cursor_x;
                 let y = window.cursor_y;
@@ -68,7 +90,7 @@ impl Editor {
                 if x == buffer.eol(y) + 1 {
                     window.move_left();
                 }
-            }
+            },
             "<C-b>" => {
                 for _ in 1..(window_height - 2) {
                     window.move_up();
@@ -138,6 +160,25 @@ impl Editor {
                 } else {
                     window.move_left();
                 }
+                match buffer.char_at(x, y) {
+                    Some(ch1) => {
+                        match buffer.char_at(x - 1, y) {
+                            Some (ch2) => {
+                                match (ch2, ch1) {
+                                    ('"', '"') |
+                                    ('\'', '\'') |
+                                    ('(', ')') |
+                                    ('{', '}') |
+                                    ('[', ']') => { buffer.remove(x, y); },
+                                    (_, _) => ()
+                                }
+                            },
+                            None => ()
+                        }
+                    },
+                    None => ()
+                }
+
                 buffer.remove(x - 1, y);
             },
             "<Enter>" => {
@@ -145,10 +186,29 @@ impl Editor {
                 window.move_down();
                 window.move_bol();
             },
+            "\"" | "\'" => {
+                buffer.insert(key, window.cursor_x, window.cursor_y);
+                window.move_right();
+                buffer.insert(key, window.cursor_x, window.cursor_y);
+            },
+            "(" => {
+                buffer.insert("(", window.cursor_x, window.cursor_y);
+                window.move_right();
+                buffer.insert(")", window.cursor_x, window.cursor_y);
+            },
+            "{" => {
+                buffer.insert("{", window.cursor_x, window.cursor_y);
+                window.move_right();
+                buffer.insert("}", window.cursor_x, window.cursor_y);
+            },
+            "[" => {
+                buffer.insert("[", window.cursor_x, window.cursor_y);
+                window.move_right();
+                buffer.insert("]", window.cursor_x, window.cursor_y);
+            },
             _ => {
                 buffer.insert(key, window.cursor_x, window.cursor_y);
-                window.cursor_x += 1;
-                window.col += 1;
+                window.move_right();
             }
         }
     }
@@ -211,6 +271,57 @@ impl Editor {
             _ => {
                 window.mode = "normal".to_string();
             }
+        }
+    }
+
+    pub fn handle_visual(&mut self, key: &str) {
+        match key {
+            "<Escape>" => {
+                let window = self.window_tree.find_active_window().unwrap();
+                window.mode = "normal".to_string();
+                let ref mut buffer = self.buffers[window.buffer_index as usize];
+                window.mark = None;
+            },
+            "y" => {
+                let window = self.window_tree.find_active_window().unwrap();
+                let ref mut buffer = self.buffers[window.buffer_index as usize];
+                match window.mark {
+                    Some(mark) => {
+                        // window.mode = "normal".to_string();
+
+                        let mut starts_with_mark = false;
+                        if mark.0 == window.row {
+                            starts_with_mark = mark.1 <= window.col;
+                        } else {
+                            starts_with_mark = mark.0 < window.row;
+                        }
+
+                        let mut lines;
+                        if starts_with_mark {
+                            lines = buffer.lines.iter().skip(mark.0 as usize).take((window.row - mark.0) as usize);
+                        } else {
+                            lines = buffer.lines.iter().skip(window.row as usize).take((mark.0 - window.row) as usize);
+                        }
+
+                        let region = lines.map(|ln| ln.iter().map(|cell| cell.ch).collect::<String>()).collect::<Vec<String>>().connect("\n");
+
+                        let mut p = Command::new("xsel")
+                            .arg("--clipboard")
+                            .arg("--input")
+                            .stdin(Stdio::piped())
+                            .stdout(Stdio::piped())
+                            .spawn()
+                            .ok().expect("Faled to set clipborad. Is xsel installed?");
+
+                        window.mark = None;
+                        window.mode = "normal".to_string();
+
+                        p.stdin.as_mut().unwrap().write_all(region.as_bytes());
+                    },
+                    None => ()
+                }
+            },
+            _ => { self.handle_normal(key); }
         }
     }
 

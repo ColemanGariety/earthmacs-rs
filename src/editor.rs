@@ -63,6 +63,7 @@ impl Editor {
                     "replace" => { self.handle_replace(key); },
                     "execute" => { self.handle_execute(key); },
                     "find_files" => { self.handle_find_files(key); },
+                    "visual" => { self.handle_visual(key); },
                     _ => ()
                 }
             }
@@ -111,7 +112,9 @@ impl Editor {
                     }
                 };
             },
-            Err(_) => ()
+            Err(err) => {
+                panic!(err);
+            }
         }
     }
 

@@ -8,6 +8,7 @@ extern crate fuzzyrusty;
 extern crate lazy_static;
 
 static COLOR_PAIR_DEFAULT: i16 = 1;
+static COLOR_PAIR_HIGHLIGHT: i16 = 2;
 
 use std::{env};
 use ncurses::*;
@@ -38,6 +39,7 @@ fn main() {
         init_pair(i, i, -1);
     }
 
+    init_pair(COLOR_PAIR_HIGHLIGHT, 0, 10);
     init_pair(COLOR_PAIR_DEFAULT, 3, -1);
 
     let ed = &mut Editor::new();

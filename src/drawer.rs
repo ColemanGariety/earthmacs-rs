@@ -45,10 +45,10 @@ impl Drawer {
         for (index, line) in self.lines.iter().enumerate() {
             if index >= self.scroll_index as usize && index < self.scroll_index as usize + height {
                 mv(y, 0);
-                clrtoeol();
-                if index == self.active_line_index as usize {attron(COLOR_PAIR(204));}
+                if index == self.active_line_index as usize {attron(COLOR_PAIR(50));}
                 addstr(line.as_str());
-                if index == self.active_line_index as usize {attroff(COLOR_PAIR(204));}
+                if index == self.active_line_index as usize {attroff(COLOR_PAIR(50));}
+                clrtoeol();
                 y += 1;
             }
         }
@@ -60,9 +60,9 @@ impl Drawer {
         y += 1;
 
         mv(y, 0);
-        clrtoeol();
         let ln = format!("{}{}", self.prompt, self.value);
         addstr(ln.as_str());
+        clrtoeol();
     }
 
     pub fn next_item(&mut self) {
@@ -111,7 +111,10 @@ impl Drawer {
         if Path::new(v).to_str().unwrap().chars().last().unwrap() == '/' {
             self.lines = paths;
         } else {
-            self.lines = paths.iter().filter(|path| (fuzz::ratio(file, path) > 10 && fuzz::partial_ratio(file, path) > 80) || fuzz::token_sort_ratio(file, path, true, true) > 50).cloned().collect();
+            self.lines = paths.iter().filter(|path| {
+                (fuzz::ratio(file, path) > 10 && fuzz::partial_ratio(file, path) > 80) ||
+                    fuzz::token_sort_ratio(file, path, true, true) > 50
+            }).cloned().collect();
         }
         self.active_line_index = 0;
         self.scroll_index = 0;

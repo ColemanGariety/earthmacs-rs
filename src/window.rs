@@ -3,7 +3,6 @@ use ncurses::*;
 
 #[derive(Clone)]
 pub struct Window {
-    pub id: i32,
     pub cursor_x: i32,
     pub cursor_y: i32,
     pub col: i32,
@@ -13,6 +12,7 @@ pub struct Window {
     pub buffer_index: i32,
     pub mode: String,
     pub active: bool,
+    pub mark: Option<(i32, i32)>,
 }
 
 impl Window {
@@ -27,7 +27,7 @@ impl Window {
             buffer_index: 0,
             mode: "normal".to_string(),
             active: false,
-            id: 0,
+            mark: None,
         }
     }
 

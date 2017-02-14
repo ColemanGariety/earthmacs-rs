@@ -1,8 +1,11 @@
+use std::cmp::{max};
 use buffer::Buffer;
 use window::Window;
+use cell::Cell;
 use ncurses::*;
 
 static COLOR_PAIR_DEFAULT: i16 = 1;
+static COLOR_PAIR_HIGHLIGHT: i16 = 2;
 
 const NORTH: usize = 1;
 const SOUTH: usize = 2;
@@ -66,7 +69,7 @@ impl WindowTree {
         let mut virtual_windows = vec![];
         virtual_draw(self, width, height, x, y, &mut virtual_windows);
 
-        return virtual_windows.iter().find(|&&(ref leaf, ref vw)| leaf.active).unwrap().1.height;
+        return virtual_windows.iter().find(|&&(ref leaf, _)| leaf.active).unwrap().1.height;
 
         fn virtual_draw<'a>(window: &'a mut WindowTree, width: i32, height: i32, x: i32, y: i32, windows: &mut Vec<(&'a mut Window, VirtualWindow)>) {
             let n = window.branches.len() as i32;
@@ -99,8 +102,8 @@ impl WindowTree {
         let mut virtual_windows = vec![];
         virtual_draw(self, width, height, x, y, &mut virtual_windows);
 
-        let active_index = virtual_windows.iter().position(|&(ref leaf, ref vw)| leaf.active).unwrap();
-        let next_index = virtual_windows.iter().position(|&(ref leaf, ref wm)| {
+        let active_index = virtual_windows.iter().position(|&(ref leaf, _)| leaf.active).unwrap();
+        let next_index = virtual_windows.iter().position(|&(_, ref wm)| {
             let active = &virtual_windows[active_index];
             match direction {
                 NORTH => {
@@ -181,17 +184,70 @@ impl WindowTree {
         } else {
             let ref buffer = buffers[self.leaf.buffer_index as usize];
             let mut lines = buffer.lines.iter().skip(self.leaf.scroll_y as usize).take(height as usize);
+            let ref spare = vec![Cell::new('\n', 0)];
 
-            for index in 0..height {
-                wmove(self.leaf.pane, (index + 1) as i32, 0);
-                wclrtoeol(self.leaf.pane);
+            let mut has_mark = false;
+            let mut starts_with_mark = false;
+            match self.leaf.mark {
+                Some(mark) => {
+                    has_mark = true;
+                    if mark.0 == self.leaf.row {
+                        starts_with_mark = mark.1 <= self.leaf.col;
+                    } else {
+                        starts_with_mark = mark.0 < self.leaf.row;
+                    }
+                },
+                None => ()
+            }
+
+            let mut marking = false;
+            for y in 0..height {
+                wmove(self.leaf.pane, (y + 1) as i32, 0);
                 waddstr(self.leaf.pane, " ");
+                wclrtoeol(self.leaf.pane);
+
                 match lines.next() {
-                    Some(line) => {
-                        for ch in line {
-                            wattron(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
-                            waddstr(self.leaf.pane, ch.ch.to_string().as_str());
-                            wattroff(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
+                    Some(mut line) => {
+                        let mut cells = line.iter();
+
+                        for x in 0..width {
+
+                            // calc mark region
+                            if has_mark {
+                                let mark = self.leaf.mark.unwrap();
+                                if starts_with_mark && y + self.leaf.scroll_y == mark.0 && x as i32 == mark.1 ||
+                                    !starts_with_mark && y + self.leaf.scroll_y == self.leaf.row && x as i32 == max(0, self.leaf.cursor_x) ||
+                                    starts_with_mark && self.leaf.scroll_y > mark.0 && y == 0
+                                {
+                                    marking = true;
+                                }
+
+                                if starts_with_mark && y + self.leaf.scroll_y == self.leaf.row && x as i32 == max(0, self.leaf.cursor_x) ||
+                                    !starts_with_mark && y + self.leaf.scroll_y == mark.0 && x as i32 == mark.1 + 1
+                                {
+                                    marking = false;
+                                }
+                            }
+
+                            // highlight mark region
+                            // and print cell
+                            if let Some(ch) = cells.next() {
+                                if marking {
+                                    wattroff(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
+                                    wattron(self.leaf.pane, COLOR_PAIR(COLOR_PAIR_HIGHLIGHT));
+                                } else {
+                                    wattroff(self.leaf.pane, COLOR_PAIR(COLOR_PAIR_HIGHLIGHT));
+                                    wattron(self.leaf.pane, COLOR_PAIR(ch.fg as i16));
+                                }
+                                waddstr(self.leaf.pane, ch.ch.to_string().as_str());
+                            } else {
+                                if marking {
+                                    wattron(self.leaf.pane, COLOR_PAIR(COLOR_PAIR_HIGHLIGHT));
+                                } else {
+                                    wattroff(self.leaf.pane, COLOR_PAIR(COLOR_PAIR_HIGHLIGHT));
+                                }
+                                waddstr(self.leaf.pane, " ");
+                            }
                         }
                     },
                     None => ()
