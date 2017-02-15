@@ -66,4 +66,31 @@ impl Window {
     pub fn scroll_up(&mut self) {
         self.scroll_y -= 1;
     }
+
+    pub fn calc_mark_region(&self) -> Option<((i32, i32), (i32, i32))> {
+        match self.mark {
+            Some(mark) => {
+                let starts_with_mark;
+                if mark.0 == self.cursor_y { starts_with_mark = self.mark.unwrap().1 <= self.cursor_x; }
+                else { starts_with_mark = mark.0 < self.cursor_y; }
+                let x;
+                let y;
+                let endx;
+                let endy;
+                if starts_with_mark {
+                    y = self.cursor_y;
+                    x = self.cursor_x;
+                    endy = mark.0;
+                    endx = mark.1;
+                } else {
+                    y = mark.0;
+                    x = mark.1;
+                    endy = self.cursor_y;
+                    endx = self.cursor_x;
+                }
+                Some(((x, y), (endx, endy)))
+            },
+            None => { None }
+        }
+    }
 }

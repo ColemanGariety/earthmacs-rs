@@ -5,9 +5,7 @@ use ncurses::*;
 use std::path::PathBuf;
 use syntect::parsing::SyntaxSet;
 use syntect::highlighting::ThemeSet;
-use syntect::easy::HighlightLines;
 use std::path::Path;
-use util;
 
 use buffer::Buffer;
 use window::Window;
@@ -80,38 +78,24 @@ impl Editor {
                 let ts = ThemeSet::load_defaults();
                 let p = Path::new(&path);
                 ps.link_syntaxes();
+                let mut buf = Buffer::new(path.clone(), None, None);
                 match p.extension() {
                     Some(e) => {
                         if let Some(inst) = ps.find_syntax_by_extension(e.to_str().unwrap()) {
-                            let mut buf = Buffer::new(path.clone(), Some(inst.clone()), Some(ts));
-                            let theme = buf.ts.as_ref().unwrap().themes["base16-ocean.dark"].clone();
-                            let mut h = HighlightLines::new(inst, &theme);
-                            for (index, line) in reader.lines().enumerate() {
-                                let ln = line.unwrap();
-                                let ranges = h.highlight(&ln);
-                                buf.lines.push(vec![]);
-                                for (style, text) in ranges {
-                                    let color = util::rgb_to_short(format!("{0:02.x}{1:02.x}{2:02.x}", style.foreground.r, style.foreground.g, style.foreground.b).as_str());
-                                    for ch in text.chars() {
-                                        buf.lines[index].push(Cell::new(ch, color as i32));
-                                    }
-                                }
-                            }
-                            self.buffers.push(buf);
+                            buf = Buffer::new(path.clone(), Some(inst.clone()), Some(ts));
                         }
-                    }
-                    None => {
-                        let mut buf = Buffer::new(path.clone(), None, None);
-                        for (index, line) in reader.lines().enumerate() {
-                            buf.lines.push(vec![]);
-                            let ln = line.unwrap();
-                            for ch in ln.chars() {
-                                buf.lines[index].push(Cell::new(ch, 0));
-                            }
-                        }
-                        self.buffers.push(buf);
-                    }
+                    },
+                    None => ()
                 };
+                for (index, line) in reader.lines().enumerate() {
+                    buf.lines.push(vec![]);
+                    let ln = line.unwrap();
+                    for ch in ln.chars() {
+                        buf.lines[index].push(Cell::new(ch, 0));
+                    }
+                    buf.highlight_line(index as i32);
+                }
+                self.buffers.push(buf);
             },
             Err(err) => {
                 panic!(err);

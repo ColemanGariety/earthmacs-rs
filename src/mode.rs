@@ -333,99 +333,70 @@ impl Editor {
             "d" | "x" => {
                 let window = self.window_tree.find_active_window().unwrap();
                 let ref mut buffer = self.buffers[window.buffer_index as usize];
-                match window.mark {
-                    Some(mark) => {
-                        let starts_with_mark;
-                        if mark.0 == window.cursor_y { starts_with_mark = mark.1 <= window.cursor_x; }
-                        else { starts_with_mark = mark.0 < window.cursor_y; }
-
-                        let mut x;
-                        let mut y;
-                        let endx;
-                        let endy;
-                        if starts_with_mark {
-                            y = window.cursor_y;
-                            x = window.cursor_x;
-                            endy = mark.0;
-                            endx = mark.1;
+                if let Some(((mut x, mut y), (endx, endy))) = window.calc_mark_region() {
+                    while y > endy || x >= endx {
+                        let length;
+                        if y != endy {
+                            length = (max(1, buffer.lines[(y - 1) as usize].len()) - 1) as i32;
                         } else {
-                            y = mark.0;
-                            x = mark.1;
-                            endy = window.cursor_y;
-                            endx = window.cursor_x;
+                            length = 0;
                         }
-
-                        while y > endy || x >= endx {
-                            let length;
-                            if y != endy {
-                                length = (max(1, buffer.lines[(y - 1) as usize].len()) - 1) as i32;
-                            } else {
-                                length = 0;
-                            }
-                            buffer.remove(x, y);
-                            if x == -1 && y != endy {
-                                y -= 1;
-                                x = length;
-                            } else {
-                                x -= 1;
-                            }
+                        buffer.remove(x, y);
+                        if x == -1 && y != endy {
+                            y -= 1;
+                            x = length;
+                        } else {
+                            x -= 1;
                         }
+                    }
 
-                        window.cursor_x = max(0, x);
-                        window.col = max(0, x);
-                        window.cursor_y = max(0, y);
-                        window.row = max(0, y);
-                        window.mode = "normal".to_string();
-                        window.mark = None;
-                    },
-                    None => ()
+                    window.cursor_x = max(0, x);
+                    window.col = max(0, x);
+                    window.cursor_y = max(0, y);
+                    window.row = max(0, y);
+                    window.mode = "normal".to_string();
+                    window.mark = None;
                 }
             },
             "y" => {
                 let window = self.window_tree.find_active_window().unwrap();
                 let ref mut buffer = self.buffers[window.buffer_index as usize];
-                match window.mark {
-                    Some(mark) => {
-                        let starts_with_mark;
-                        if mark.0 == window.cursor_y { starts_with_mark = mark.1 <= window.cursor_x; }
-                        else { starts_with_mark = mark.0 < window.cursor_y; }
-
-                        let lines;
-                        if starts_with_mark {
-                            lines = buffer.lines.iter().skip(mark.0 as usize).take((window.cursor_y - mark.0 + 1) as usize);
+                if let Some(((mut x, mut y), (endx, endy))) = window.calc_mark_region() {
+                    let mut region = String::new();
+                    while y > endy || x >= endx {
+                        let length;
+                        if y != endy {
+                            length = (max(1, buffer.lines[(y - 1) as usize].len()) - 1) as i32;
                         } else {
-                            lines = buffer.lines.iter().skip(window.cursor_y as usize).take((mark.0 - window.cursor_y + 1) as usize);
+                            length = 0;
                         }
+                        let mut new;
+                        match buffer.char_at(x, y) {
+                            Some(ch) => { new = ch.to_string(); },
+                            None => { new = "\n".to_string(); }
+                        }
+                        new.push_str(region.as_str());
+                        region = new;
+                        if x == -1 && y != endy {
+                            y -= 1;
+                            x = length;
+                        } else {
+                            x -= 1;
+                        }
+                    }
 
-                        let length = lines.len();
-                        let region = lines.enumerate().map(|(index, ln)| {
-                            let sn;
-                            let tn;
-                            if index == 0 {
-                                if starts_with_mark { sn = mark.1 }
-                                else { sn = window.cursor_x; }
-                            } else { sn = 0; }
-                            if index == length - 1 {
-                                if starts_with_mark { tn = window.cursor_x + 1; }
-                                else { tn = mark.1; }
-                            } else { tn = ln.len() as i32; }
-                            return ln.iter().skip(sn as usize).take(tn as usize).map(|cell| cell.ch).collect::<String>();
-                        }).collect::<Vec<String>>().join("\n");
+                    let mut p = Command::new("xsel")
+                        .arg("--clipboard")
+                        .arg("--input")
+                        .stdin(Stdio::piped())
+                        .stdout(Stdio::piped())
+                        .spawn()
+                        .ok().expect("Faled to set clipborad. Is xsel installed?");
 
-                        let mut p = Command::new("xsel")
-                            .arg("--clipboard")
-                            .arg("--input")
-                            .stdin(Stdio::piped())
-                            .stdout(Stdio::piped())
-                            .spawn()
-                            .ok().expect("Faled to set clipborad. Is xsel installed?");
+                    window.mark = None;
+                    window.mode = "normal".to_string();
 
-                        window.mark = None;
-                        window.mode = "normal".to_string();
-
-                        p.stdin.as_mut().unwrap().write_all(region.as_bytes()).expect("Failed to set clipboard. Make sure xsel is working properly.");
-                    },
-                    None => ()
+                    p.stdin.as_mut().unwrap().write_all(region.as_bytes()).expect("Failed to set clipboard. Make sure xsel is working properly.");
                 }
             },
             _ => { self.handle_normal(key); }
