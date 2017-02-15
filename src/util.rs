@@ -1,12 +1,12 @@
 use regex::Regex;
 
 pub fn rgb_to_short(rgb: &str) -> usize {
-	let matches = RE.captures(rgb).unwrap();
-	let parts = vec!(
-		u8::from_str_radix(matches.at(1).unwrap(), 16).unwrap(),
-		u8::from_str_radix(matches.at(2).unwrap(), 16).unwrap(),
-		u8::from_str_radix(matches.at(3).unwrap(), 16).unwrap(),
-	);
+    let matches = RE.captures(rgb).unwrap();
+    let parts = vec!(
+        u8::from_str_radix(matches.at(1).unwrap(), 16).unwrap(),
+        u8::from_str_radix(matches.at(2).unwrap(), 16).unwrap(),
+        u8::from_str_radix(matches.at(3).unwrap(), 16).unwrap(),
+    );
 
     let mut best = 0;
     let mut best_distance = 255 * 255 * 3 + 1;

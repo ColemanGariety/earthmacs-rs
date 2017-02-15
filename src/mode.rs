@@ -1,6 +1,6 @@
+use std::cmp::{min};
 use std::process::{Command, Stdio};
 use std::io::{Read, Write};
-use std::cmp::{min,max};
 use std;
 use editor::Editor;
 use drawer::Drawer;
@@ -89,9 +89,12 @@ impl Editor {
                 if lines.clone().count() == 1 {
                     buffer.insert(lines.next().unwrap(), window.col, window.row);
                 } else {
-                    for line in lines {
-                        buffer.insert_newline(window.col, window.row);
-                        buffer.insert(line, window.col, window.row);
+                    let length = lines.clone().count();
+                    for (index, line) in lines.enumerate() {
+                        if index != length - 1 {
+                            buffer.insert_newline(window.col, window.row + index as i32);
+                        }
+                        buffer.insert(line, window.col, window.row + index as i32);
                     }
                 }
             },
@@ -327,28 +330,82 @@ impl Editor {
                 window.mode = "normal".to_string();
                 window.mark = None;
             },
+            "d" | "x" => {
+                let window = self.window_tree.find_active_window().unwrap();
+                let ref mut buffer = self.buffers[window.buffer_index as usize];
+                match window.mark {
+                    Some(mark) => {
+                        let starts_with_mark;
+                        if mark.0 == window.row { starts_with_mark = mark.1 <= window.col; }
+                        else { starts_with_mark = mark.0 < window.row; }
+
+                        let mut x;
+                        let mut y;
+                        let endx;
+                        let endy;
+                        if starts_with_mark {
+                            y = window.row;
+                            x = window.col;
+                            endy = mark.0;
+                            endx = mark.1;
+                        } else {
+                            y = mark.0;
+                            x = mark.1;
+                            endy = window.row;
+                            endx = window.col;
+                        }
+
+                        while y >= endy && x >= endx {
+                            buffer.remove(x, y);
+                            if buffer.lines[y as usize].len() == 0 {
+                                buffer.remove_line(y as usize);
+                            }
+                            if x == 0 && y != endy {
+                                y -= 1;
+                                x = (buffer.lines[y as usize].len() - 1) as i32;
+                                window.move_up();
+                            } else {
+                                x -= 1;
+                                window.move_left();
+                            }
+                        }
+                        
+                        window.mode = "normal".to_string();
+                        window.mark = None;
+                    },
+                    None => ()
+                }
+            },
             "y" => {
                 let window = self.window_tree.find_active_window().unwrap();
                 let ref mut buffer = self.buffers[window.buffer_index as usize];
                 match window.mark {
                     Some(mark) => {
-                        // window.mode = "normal".to_string();
-
                         let starts_with_mark;
-                        if mark.0 == window.row {
-                            starts_with_mark = mark.1 <= window.col;
-                        } else {
-                            starts_with_mark = mark.0 < window.row;
-                        }
+                        if mark.0 == window.row { starts_with_mark = mark.1 <= window.col; }
+                        else { starts_with_mark = mark.0 < window.row; }
 
                         let lines;
                         if starts_with_mark {
-                            lines = buffer.lines.iter().skip(mark.0 as usize).take(max(1, window.row - mark.0) as usize);
+                            lines = buffer.lines.iter().skip(mark.0 as usize).take((window.row - mark.0 + 1) as usize);
                         } else {
-                            lines = buffer.lines.iter().skip(window.row as usize).take(max(1, mark.0 - window.row) as usize);
+                            lines = buffer.lines.iter().skip(window.row as usize).take((mark.0 - window.row + 1) as usize);
                         }
 
-                        let region = lines.map(|ln| ln.iter().map(|cell| cell.ch).collect::<String>()).collect::<Vec<String>>().join("\n");
+                        let length = lines.len();
+                        let region = lines.enumerate().map(|(index, ln)| {
+                            let sn;
+                            let tn;
+                            if index == 0 {
+                                if starts_with_mark { sn = mark.1 }
+                                else { sn = window.col; }
+                            } else { sn = 0; }
+                            if index == length - 1 {
+                                if starts_with_mark { tn = window.col + 1; }
+                                else { tn = mark.1; }
+                            } else { tn = ln.len() as i32; }
+                            return ln.iter().skip(sn as usize).take(tn as usize).map(|cell| cell.ch).collect::<String>();
+                        }).collect::<Vec<String>>().join("\n");
 
                         let mut p = Command::new("xsel")
                             .arg("--clipboard")
