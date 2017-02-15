@@ -188,10 +188,10 @@ impl WindowTree {
             match self.leaf.mark {
                 Some(mark) => {
                     has_mark = true;
-                    if mark.0 == self.leaf.row {
-                        starts_with_mark = mark.1 <= self.leaf.col;
+                    if mark.0 == self.leaf.cursor_y {
+                        starts_with_mark = mark.1 <= self.leaf.cursor_x;
                     } else {
-                        starts_with_mark = mark.0 < self.leaf.row;
+                        starts_with_mark = mark.0 < self.leaf.cursor_y;
                     }
                 },
                 None => ()
@@ -213,13 +213,13 @@ impl WindowTree {
                             if has_mark {
                                 let mark = self.leaf.mark.unwrap();
                                 if starts_with_mark && y + self.leaf.scroll_y == mark.0 && x as i32 == mark.1 ||
-                                    !starts_with_mark && y + self.leaf.scroll_y == self.leaf.row && x as i32 == max(0, self.leaf.cursor_x) ||
+                                    !starts_with_mark && y + self.leaf.scroll_y == self.leaf.cursor_y && x as i32 == max(0, self.leaf.cursor_x) ||
                                     starts_with_mark && self.leaf.scroll_y > mark.0 && y == 0
                                 {
                                     marking = true;
                                 }
 
-                                if starts_with_mark && y + self.leaf.scroll_y == self.leaf.row && x as i32 == max(0, self.leaf.cursor_x) ||
+                                if starts_with_mark && y + self.leaf.scroll_y == self.leaf.cursor_y && x as i32 == max(0, self.leaf.cursor_x) ||
                                     !starts_with_mark && y + self.leaf.scroll_y == mark.0 && x as i32 == mark.1 + 1
                                 {
                                     marking = false;

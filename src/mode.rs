@@ -64,12 +64,12 @@ impl Editor {
                 }
             },
             "O" => {
-                buffer.insert_newline(0, window.row);
+                buffer.insert_newline(0, window.cursor_y);
                 window.move_bol();
                 window.mode = "insert".to_string();
             },
             "o" => {
-                buffer.insert_newline(0, window.row + 1);
+                buffer.insert_newline(0, window.cursor_y + 1);
                 window.move_down();
                 window.move_bol();
                 window.mode = "insert".to_string();
@@ -87,21 +87,21 @@ impl Editor {
                 p.stdout.unwrap().read_to_string(&mut s).expect("Failed to grab from clipboard. Make sure xsel is working properly.");
                 let mut lines = s.split("\n");
                 if lines.clone().count() == 1 {
-                    buffer.insert(lines.next().unwrap(), window.col, window.row);
+                    buffer.insert(lines.next().unwrap(), window.cursor_x, window.cursor_y);
                 } else {
                     let length = lines.clone().count();
                     for (index, line) in lines.enumerate() {
                         if index != length - 1 {
-                            buffer.insert_newline(window.col, window.row + index as i32);
+                            buffer.insert_newline(window.cursor_x, window.cursor_y + index as i32);
                         }
-                        buffer.insert(line, window.col, window.row + index as i32);
+                        buffer.insert(line, window.cursor_x, window.cursor_y + index as i32);
                     }
                 }
             },
             "r" => { window.mode = "replace".to_string() },
             "v" => {
                 window.mode = "visual".to_string();
-                window.mark = Some((window.row, window.col))
+                window.mark = Some((window.cursor_y, window.cursor_x))
             }
             "x" => {
                 let x = window.cursor_x;
@@ -153,7 +153,7 @@ impl Editor {
             "d" => {
                 let row = window.cursor_y;
                 buffer.remove_line(row as usize);
-                window.cursor_x  = min(buffer.eol(window.cursor_y), window.col);
+                window.cursor_x  = min(buffer.eol(window.cursor_y), window.cursor_x);
                 window.mode = "normal".to_string();
             },
             _ => ()
@@ -336,26 +336,26 @@ impl Editor {
                 match window.mark {
                     Some(mark) => {
                         let starts_with_mark;
-                        if mark.0 == window.row { starts_with_mark = mark.1 <= window.col; }
-                        else { starts_with_mark = mark.0 < window.row; }
+                        if mark.0 == window.cursor_y { starts_with_mark = mark.1 <= window.cursor_x; }
+                        else { starts_with_mark = mark.0 < window.cursor_y; }
 
                         let mut x;
                         let mut y;
                         let endx;
                         let endy;
                         if starts_with_mark {
-                            y = window.row;
-                            x = window.col;
+                            y = window.cursor_y;
+                            x = window.cursor_x;
                             endy = mark.0;
                             endx = mark.1;
                         } else {
                             y = mark.0;
                             x = mark.1;
-                            endy = window.row;
-                            endx = window.col;
+                            endy = window.cursor_y;
+                            endx = window.cursor_x;
                         }
 
-                        while y >= endy && x >= endx {
+                        while y > endy || x >= endx {
                             buffer.remove(x, y);
                             if buffer.lines[y as usize].len() == 0 {
                                 buffer.remove_line(y as usize);
@@ -382,14 +382,14 @@ impl Editor {
                 match window.mark {
                     Some(mark) => {
                         let starts_with_mark;
-                        if mark.0 == window.row { starts_with_mark = mark.1 <= window.col; }
-                        else { starts_with_mark = mark.0 < window.row; }
+                        if mark.0 == window.cursor_y { starts_with_mark = mark.1 <= window.cursor_x; }
+                        else { starts_with_mark = mark.0 < window.cursor_y; }
 
                         let lines;
                         if starts_with_mark {
-                            lines = buffer.lines.iter().skip(mark.0 as usize).take((window.row - mark.0 + 1) as usize);
+                            lines = buffer.lines.iter().skip(mark.0 as usize).take((window.cursor_y - mark.0 + 1) as usize);
                         } else {
-                            lines = buffer.lines.iter().skip(window.row as usize).take((mark.0 - window.row + 1) as usize);
+                            lines = buffer.lines.iter().skip(window.cursor_y as usize).take((mark.0 - window.cursor_y + 1) as usize);
                         }
 
                         let length = lines.len();
@@ -398,10 +398,10 @@ impl Editor {
                             let tn;
                             if index == 0 {
                                 if starts_with_mark { sn = mark.1 }
-                                else { sn = window.col; }
+                                else { sn = window.cursor_x; }
                             } else { sn = 0; }
                             if index == length - 1 {
-                                if starts_with_mark { tn = window.col + 1; }
+                                if starts_with_mark { tn = window.cursor_x + 1; }
                                 else { tn = mark.1; }
                             } else { tn = ln.len() as i32; }
                             return ln.iter().skip(sn as usize).take(tn as usize).map(|cell| cell.ch).collect::<String>();
