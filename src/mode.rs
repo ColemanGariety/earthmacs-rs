@@ -1,4 +1,4 @@
-use std::cmp::{min};
+use std::cmp::{min,max};
 use std::process::{Command, Stdio};
 use std::io::{Read, Write};
 use std;
@@ -356,20 +356,25 @@ impl Editor {
                         }
 
                         while y > endy || x >= endx {
-                            buffer.remove(x, y);
-                            if buffer.lines[y as usize].len() == 0 {
-                                buffer.remove_line(y as usize);
+                            let length;
+                            if y != endy {
+                                length = (max(1, buffer.lines[(y - 1) as usize].len()) - 1) as i32;
+                            } else {
+                                length = 0;
                             }
-                            if x == 0 && y != endy {
+                            buffer.remove(x, y);
+                            if x == -1 && y != endy {
                                 y -= 1;
-                                x = (buffer.lines[y as usize].len() - 1) as i32;
-                                window.move_up();
+                                x = length;
                             } else {
                                 x -= 1;
-                                window.move_left();
                             }
                         }
-                        
+
+                        window.cursor_x = max(0, x);
+                        window.col = max(0, x);
+                        window.cursor_y = max(0, y);
+                        window.row = max(0, y);
                         window.mode = "normal".to_string();
                         window.mark = None;
                     },
