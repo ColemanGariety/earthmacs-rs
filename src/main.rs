@@ -25,6 +25,7 @@ mod window_tree;
 mod cell;
 mod util;
 mod drawer;
+mod transaction;
 
 fn main() {
     initscr();

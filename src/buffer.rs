@@ -6,12 +6,14 @@ use std::cmp::{max};
 use cell::Cell;
 use std::path::PathBuf;
 use util;
+use transaction::Transaction;
 
 pub struct Buffer {
     pub lines: Vec<Vec<Cell>>,
     pub path: PathBuf,
     pub highlighter: Option<syntect::parsing::SyntaxDefinition>,
     pub ts: Option<syntect::highlighting::ThemeSet>,
+    pub transactions: Vec<Transaction>,
 }
 
 impl Buffer {
@@ -21,6 +23,7 @@ impl Buffer {
             path: path,
             highlighter: highlighter,
             ts: ts,
+            transactions: vec![],
         }
     }
 
@@ -46,8 +49,21 @@ impl Buffer {
         }
     }
 
-    pub fn remove(&mut self, x: i32, y: i32) {
+    pub fn remove(&mut self, x: i32, y: i32, t: bool) {
         let mut line = self.lines[y as usize].clone();
+        if t {
+            match self.char_at(x, y) {
+                Some(ch) => {
+                    self.transactions.push(Transaction{
+                        x: x,
+                        y: y,
+                        add: false,
+                        text: ch.to_string(),
+                    });
+                },
+                None => {}
+            }
+        }
         if x == -1 || line.len() == 0 {
             self.lines[(y - 1) as usize].append(&mut line);
             self.remove_line(y as usize);
@@ -60,7 +76,7 @@ impl Buffer {
         self.highlight_line(y);
     }
 
-    pub fn insert(&mut self, c: &str, x: i32, y: i32) {
+    pub fn insert(&mut self, c: &str, x: i32, y: i32, t: bool) {
         let mut line = self.lines[y as usize].clone();
         let mut new = vec![];
         if line.len() == 0 {
@@ -75,6 +91,14 @@ impl Buffer {
 
         self.lines[y as usize] = new;
         self.highlight_line(y);
+        if t {
+            self.transactions.push(Transaction{
+                x: x,
+                y: y,
+                add: true,
+                text: c.to_string(),
+            });
+        }
     }
 
     pub fn highlight_line(&mut self, y: i32) {

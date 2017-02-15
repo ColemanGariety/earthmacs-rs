@@ -87,18 +87,29 @@ impl Editor {
                 p.stdout.unwrap().read_to_string(&mut s).expect("Failed to grab from clipboard. Make sure xsel is working properly.");
                 let mut lines = s.split("\n");
                 if lines.clone().count() == 1 {
-                    buffer.insert(lines.next().unwrap(), window.cursor_x, window.cursor_y);
+                    buffer.insert(lines.next().unwrap(), window.cursor_x, window.cursor_y, true);
                 } else {
                     let length = lines.clone().count();
                     for (index, line) in lines.enumerate() {
                         if index != length - 1 {
                             buffer.insert_newline(window.cursor_x, window.cursor_y + index as i32);
                         }
-                        buffer.insert(line, window.cursor_x, window.cursor_y + index as i32);
+                        buffer.insert(line, window.cursor_x, window.cursor_y + index as i32, true);
                     }
                 }
             },
             "r" => { window.mode = "replace".to_string() },
+            "u" => {
+                if let Some(t) = buffer.transactions.pop() {
+                    if t.add {
+                        buffer.remove(t.x, t.y, false);
+                        window.move_left();
+                    } else {
+                        buffer.insert(t.text.as_str(), t.x, t.y, false);
+                        window.move_right();
+                    }
+                }
+            },
             "v" => {
                 window.mode = "visual".to_string();
                 window.mark = Some((window.cursor_y, window.cursor_x))
@@ -106,7 +117,7 @@ impl Editor {
             "x" => {
                 let x = window.cursor_x;
                 let y = window.cursor_y;
-                buffer.remove(x, y);
+                buffer.remove(x, y, true);
                 if x == buffer.eol(y) + 1 {
                     window.move_left();
                 }
@@ -193,7 +204,7 @@ impl Editor {
                                     ('\'', '\'') |
                                     ('(', ')') |
                                     ('{', '}') |
-                                    ('[', ']') => { buffer.remove(x, y); },
+                                    ('[', ']') => { buffer.remove(x, y, true); },
                                     (_, _) => ()
                                 }
                             },
@@ -203,7 +214,7 @@ impl Editor {
                     None => ()
                 }
 
-                buffer.remove(x - 1, y);
+                buffer.remove(x - 1, y, true);
             },
             "<Enter>" => {
                 buffer.insert_newline(window.cursor_x, window.cursor_y);
@@ -211,27 +222,27 @@ impl Editor {
                 window.move_bol();
             },
             "\"" | "\'" => {
-                buffer.insert(key, window.cursor_x, window.cursor_y);
+                buffer.insert(key, window.cursor_x, window.cursor_y, true);
                 window.move_right();
-                buffer.insert(key, window.cursor_x, window.cursor_y);
+                buffer.insert(key, window.cursor_x, window.cursor_y, true);
             },
             "(" => {
-                buffer.insert("(", window.cursor_x, window.cursor_y);
+                buffer.insert("(", window.cursor_x, window.cursor_y, true);
                 window.move_right();
-                buffer.insert(")", window.cursor_x, window.cursor_y);
+                buffer.insert(")", window.cursor_x, window.cursor_y, true);
             },
             "{" => {
-                buffer.insert("{", window.cursor_x, window.cursor_y);
+                buffer.insert("{", window.cursor_x, window.cursor_y, true);
                 window.move_right();
-                buffer.insert("}", window.cursor_x, window.cursor_y);
+                buffer.insert("}", window.cursor_x, window.cursor_y, true);
             },
             "[" => {
-                buffer.insert("[", window.cursor_x, window.cursor_y);
+                buffer.insert("[", window.cursor_x, window.cursor_y, true);
                 window.move_right();
-                buffer.insert("]", window.cursor_x, window.cursor_y);
+                buffer.insert("]", window.cursor_x, window.cursor_y, true);
             },
             _ => {
-                buffer.insert(key, window.cursor_x, window.cursor_y);
+                buffer.insert(key, window.cursor_x, window.cursor_y, true);
                 window.move_right();
             }
         }
@@ -300,8 +311,8 @@ impl Editor {
             _ => {
                 let x = window.cursor_x;
                 let y = window.cursor_y;
-                buffer.remove(x, y);
-                buffer.insert(key, x, y);
+                buffer.remove(x, y, true);
+                buffer.insert(key, x, y, true);
                 window.mode = "normal".to_string();
             },
         }
@@ -341,7 +352,7 @@ impl Editor {
                         } else {
                             length = 0;
                         }
-                        buffer.remove(x, y);
+                        buffer.remove(x, y, true);
                         if x == -1 && y != endy {
                             y -= 1;
                             x = length;
